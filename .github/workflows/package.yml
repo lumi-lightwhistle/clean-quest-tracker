@@ -2,7 +2,7 @@ name: Package
 
 # Builds the add-on zip for a release tag and uploads it to GitHub Releases and CurseForge.
 # Started automatically by the Release workflow; can also be run by hand from the Actions tab
-# to re-upload an existing tag.
+# to re-upload an existing tag. Tick "dry run" to build without uploading anything.
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +10,11 @@ on:
         description: Release tag to package (for example v0.8.5)
         required: true
         type: string
+      dry_run:
+        description: Build only, upload nothing
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -22,8 +27,32 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
+      - name: Stage the add-on folder as its own repo
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          # The packager wants the add-on at the root of a git checkout, but here it lives in
+          # the CleanQuestTracker subfolder. Build a small repo from that folder and tag it.
+          # The packaging config comes from the commit this workflow runs from, so fixes to it
+          # also apply to older tags.
+          stage="$RUNNER_TEMP/stage"
+          mkdir "$stage"
+          cp -a CleanQuestTracker/. "$stage/"
+          cp CHANGELOG.md "$stage/CHANGELOG.md"
+          git show "$GITHUB_SHA:.pkgmeta" > "$stage/.pkgmeta"
+          cd "$stage"
+          git init -q
+          git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "$TAG"
+          git tag "$TAG"
       - name: Package and upload
         uses: BigWigsMods/packager@v2
+        with:
+          args: -t ${{ runner.temp }}/stage ${{ inputs.dry_run && '-d' || '' }}
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+      - name: Show what was built
+        if: ${{ inputs.dry_run }}
+        run: |
+          find . -name '*.zip' -not -path './.git/*' | while read -r z; do echo "== $z"; unzip -l "$z"; done
