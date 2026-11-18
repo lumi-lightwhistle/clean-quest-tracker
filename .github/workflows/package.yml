@@ -27,32 +27,41 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
-      - name: Stage the add-on folder as its own repo
+      - name: Prepare packaging inputs
+        id: prep
         env:
           TAG: ${{ inputs.tag }}
         run: |
-          # The packager wants the add-on at the root of a git checkout, but here it lives in
-          # the CleanQuestTracker subfolder. Build a small repo from that folder and tag it.
-          # The packaging config comes from the commit this workflow runs from, so fixes to it
-          # also apply to older tags.
-          stage="$RUNNER_TEMP/stage"
-          mkdir "$stage"
-          cp -a CleanQuestTracker/. "$stage/"
-          cp CHANGELOG.md "$stage/CHANGELOG.md"
-          git show "$GITHUB_SHA:.pkgmeta" > "$stage/.pkgmeta"
-          cd "$stage"
-          git init -q
-          git add -A
-          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "$TAG"
-          git tag "$TAG"
+          # The packaging config always comes from the commit this workflow runs from, so
+          # fixes to it also apply when an older tag is re-packaged.
+          git show "$GITHUB_SHA:.pkgmeta" > "$RUNNER_TEMP/pkgmeta.yaml"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+          if [ -f CleanQuestTracker.toc ]; then
+            echo "top=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
+          else
+            # Tags up to v0.8.5 keep the add-on in a CleanQuestTracker subfolder. Stage that
+            # folder as its own small repo so the packager finds the .toc at the root.
+            stage="$RUNNER_TEMP/stage"
+            mkdir "$stage"
+            cp -a CleanQuestTracker/. "$stage/"
+            cp CHANGELOG.md "$stage/CHANGELOG.md"
+            cd "$stage"
+            git init -q
+            git add -A
+            git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "$TAG"
+            git tag "$TAG"
+            echo "top=$stage" >> "$GITHUB_OUTPUT"
+          fi
       - name: Package and upload
         uses: BigWigsMods/packager@v2
         with:
-          args: -t ${{ runner.temp }}/stage ${{ inputs.dry_run && '-d' || '' }}
+          # Zip: CleanQuestTracker-0.8.5.zip. CurseForge label: CleanQuestTracker-0.8.5.zip
+          args: -t ${{ steps.prep.outputs.top }} -m ${{ runner.temp }}/pkgmeta.yaml -n "{package-name}-${{ steps.prep.outputs.version }}:{package-name}-${{ steps.prep.outputs.version }}.zip" ${{ inputs.dry_run && '-d' || '' }}
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
       - name: Show what was built
         if: ${{ inputs.dry_run }}
         run: |
-          find . -name '*.zip' -not -path './.git/*' | while read -r z; do echo "== $z"; unzip -l "$z"; done
+          find . "$RUNNER_TEMP/stage" -name '*.zip' -not -path './.git/*' 2>/dev/null | while read -r z; do echo "== $z"; unzip -l "$z"; done
