@@ -6,6 +6,7 @@
 ## Version: 0.8.4
 # x-release-please-end
 ## Category: Quests
+## X-Curse-Project-ID: 1814563
 ## IconTexture: Interface\AddOns\CleanQuestTracker\Media\AddonIcon
 ## SavedVariables: CleanQuestTrackerDB
 ## OptionalDeps: Blizzard_ObjectiveTracker, Spoken, Spoken_Quests
