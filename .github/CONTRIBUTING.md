@@ -4,7 +4,18 @@ Thanks for helping. Bug reports, ideas and pull requests are all welcome.
 
 ## Layout
 
-The repository root is the add-on. `CleanQuestTracker.toc` lists the load order, the `.lua` files are the code and `Media/` holds the textures. `tools/` has dev scripts and `docs/` has the CurseForge page text; neither ships in the add-on zip.
+The repository root is the add-on folder. `CleanQuestTracker.toc` lists the load order.
+
+| Folder | What's in it |
+|---|---|
+| `Core/` | Settings, defaults, presets, migrations and events |
+| `Tracker/` | The quest list and its parts: zones, pools, quest items, motion, search, progress bars and party detection |
+| `UI/` | The tracker frame, the search box and the settings window |
+| `Media/` | Textures |
+| `tools/` | Dev scripts (not shipped) |
+| `docs/` | The CurseForge page text and icons (not shipped) |
+
+A new Lua file must be listed in the `.toc` with its folder, for example `Tracker\TrackerZones.lua`. CI fails if a file is missing from the `.toc` or the `.toc` lists one that doesn't exist.
 
 ## Trying a change in game
 

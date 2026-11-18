@@ -109,7 +109,7 @@ Shift-click a quest to link it in chat. Right-click it to stop tracking.
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setting up, testing in game and opening a pull request. Releases are automatic: merged changes collect in a release pull request, and merging it publishes to GitHub and CurseForge.
+Bug reports, ideas and pull requests are welcome. The [contributing guide](.github/CONTRIBUTING.md) covers setting up, testing in game and opening a pull request. Releases are automatic: merged changes collect in a release pull request, and merging it publishes to GitHub and CurseForge.
 
 ## License
 

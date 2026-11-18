@@ -11,19 +11,19 @@
 ## SavedVariables: CleanQuestTrackerDB
 ## OptionalDeps: Blizzard_ObjectiveTracker, Spoken, Spoken_Quests
 
-Core.lua
-Progress.lua
-Party.lua
-Tracker.lua
-TrackerZones.lua
-TrackerPools.lua
-TrackerItems.lua
-TrackerSpoken.lua
-TrackerMotion.lua
-TrackerHighlight.lua
-TrackerSearch.lua
-TrackerWatch.lua
-Frame.lua
-FrameSearch.lua
-Options.lua
-OptionsPages.lua
+Core\Core.lua
+Tracker\Progress.lua
+Tracker\Party.lua
+Tracker\Tracker.lua
+Tracker\TrackerZones.lua
+Tracker\TrackerPools.lua
+Tracker\TrackerItems.lua
+Tracker\TrackerSpoken.lua
+Tracker\TrackerMotion.lua
+Tracker\TrackerHighlight.lua
+Tracker\TrackerSearch.lua
+Tracker\TrackerWatch.lua
+UI\Frame.lua
+UI\FrameSearch.lua
+UI\Options.lua
+UI\OptionsPages.lua
