@@ -1,11 +1,23 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bump-minor-pre-major": false,
+  "bump-patch-for-minor-pre-major": true,
   "packages": {
     ".": {
       "release-type": "simple",
       "package-name": "CleanQuestTracker",
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feat", "section": "✨ New", "hidden": false },
+        { "type": "fix", "section": "🐛 Fixed", "hidden": false },
+        { "type": "perf", "section": "⚡ Faster", "hidden": false },
+        { "type": "refactor", "section": "🧹 Under the hood", "hidden": false },
+        { "type": "docs", "section": "📖 Docs", "hidden": false },
+        { "type": "chore", "section": "Chores", "hidden": true },
+        { "type": "ci", "section": "CI", "hidden": true },
+        { "type": "test", "section": "Tests", "hidden": true }
+      ],
       "extra-files": [
         "CleanQuestTracker/CleanQuestTracker.toc",
         "CleanQuestTracker/README.md"
