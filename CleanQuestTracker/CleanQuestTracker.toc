@@ -1,0 +1,28 @@
+## Interface: 16001
+## Title: Clean Quest Tracker
+## Notes: Quest tracker with zone groups, party counts, progress bars and a resizable frame.
+## Author: Jack
+# x-release-please-start-version
+## Version: 0.8.4
+# x-release-please-end
+## Category: Quests
+## IconTexture: Interface\AddOns\CleanQuestTracker\Media\AddonIcon
+## SavedVariables: CleanQuestTrackerDB
+## OptionalDeps: Blizzard_ObjectiveTracker, Spoken, Spoken_Quests
+
+Core.lua
+Progress.lua
+Party.lua
+Tracker.lua
+TrackerZones.lua
+TrackerPools.lua
+TrackerItems.lua
+TrackerSpoken.lua
+TrackerMotion.lua
+TrackerHighlight.lua
+TrackerSearch.lua
+TrackerWatch.lua
+Frame.lua
+FrameSearch.lua
+Options.lua
+OptionsPages.lua

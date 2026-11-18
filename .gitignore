@@ -1,0 +1,17 @@
+# Built by CI on release, not stored in git
+Releases/
+.release/
+
+# Local agent notes (contain machine paths and account details)
+CLAUDE.md
+.claude/
+**/undefined/
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+__pycache__/
+*.pyc

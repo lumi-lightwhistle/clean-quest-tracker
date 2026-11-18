@@ -1,0 +1,19 @@
+package-as: CleanQuestTracker
+
+ignore:
+  - tools
+  - Releases
+  - .github
+  - .release-please-manifest.json
+  - release-please-config.json
+  - SECURITY.md
+  - CONTRIBUTING.md
+  - README.md
+  - LICENSE
+  - CLAUDE.md
+  - CleanQuestTracker/README.md
+  - "**/undefined"
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown

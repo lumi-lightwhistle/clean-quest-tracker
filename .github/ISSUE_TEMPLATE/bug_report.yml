@@ -1,0 +1,31 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Add-on version
+      placeholder: "0.8.4"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: errors
+    attributes:
+      label: Lua error text
+      description: From BugSack/BugGrabber or the in-game error popup.
+      render: text
+  - type: textarea
+    id: other
+    attributes:
+      label: Other add-ons that touch the quest tracker (Questie, Spoken, etc.)
