@@ -19,13 +19,13 @@ jobs:
       - name: Structural Lua check
         run: |
           status=0
-          for f in CleanQuestTracker/*.lua; do
+          for f in *.lua; do
             echo "== $f"
             python tools/luacheck.py "$f" > /tmp/out.txt 2>&1 || { cat /tmp/out.txt; status=1; }
           done
           exit $status
       - name: Every file in the .toc exists
         run: |
-          grep -E '^[A-Za-z0-9_]+\.lua' CleanQuestTracker/CleanQuestTracker.toc | tr -d '\r' | while read -r f; do
-            test -f "CleanQuestTracker/$f" || { echo "missing: $f"; exit 1; }
+          grep -E '^[A-Za-z0-9_]+\.lua' CleanQuestTracker.toc | tr -d '\r' | while read -r f; do
+            test -f "$f" || { echo "missing: $f"; exit 1; }
           done

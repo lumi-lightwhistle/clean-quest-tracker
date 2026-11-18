@@ -1,9 +1,19 @@
-# Used by the Package workflow, which points the packager at the CleanQuestTracker folder
-# (-t CleanQuestTracker), so paths here are relative to that folder.
+# Used by the Package workflow. The add-on sits at the repository root, so everything that is
+# not part of the add-on is listed here to keep it out of the zip.
 package-as: CleanQuestTracker
 
 ignore:
+  - tools
+  - docs
+  - .github
+  - .gitattributes
+  - .gitignore
+  - .release-please-manifest.json
+  - release-please-config.json
   - README.md
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - CLAUDE.md
 
 manual-changelog:
   filename: CHANGELOG.md

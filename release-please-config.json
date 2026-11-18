@@ -19,8 +19,7 @@
         { "type": "test", "section": "Tests", "hidden": true }
       ],
       "extra-files": [
-        "CleanQuestTracker/CleanQuestTracker.toc",
-        "CleanQuestTracker/README.md"
+        "CleanQuestTracker.toc"
       ]
     }
   }
