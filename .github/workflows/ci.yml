@@ -21,16 +21,20 @@ jobs:
       - name: Structural Lua check
         run: |
           status=0
-          for f in *.lua; do
+          for f in $(git ls-files '*.lua' ':!tools/*'); do
             echo "== $f"
             python tools/luacheck.py "$f" > /tmp/out.txt 2>&1 || { cat /tmp/out.txt; status=1; }
           done
           exit $status
-      - name: Every file in the .toc exists
+      - name: Every file in the .toc exists, and every Lua file is in the .toc
         run: |
-          grep -E '^[A-Za-z0-9_]+\.lua' CleanQuestTracker.toc | tr -d '\r' | while read -r f; do
-            test -f "$f" || { echo "missing: $f"; exit 1; }
-          done
+          # The .toc uses Windows-style paths (Tracker\Zones.lua); compare with forward slashes.
+          grep -E '\.lua[[:space:]]*$' CleanQuestTracker.toc | tr -d '\r' | tr '\\' '/' | sort > /tmp/toc.txt
+          git ls-files '*.lua' ':!tools/*' | sort > /tmp/files.txt
+          status=0
+          comm -23 /tmp/toc.txt /tmp/files.txt | sed 's/^/listed in the .toc but missing: /' | grep . && status=1
+          comm -13 /tmp/toc.txt /tmp/files.txt | sed 's/^/not listed in the .toc: /' | grep . && status=1
+          exit $status
 
   # Squash-merged PR titles become the commit message, which drives the changelog.
   conventional-title:

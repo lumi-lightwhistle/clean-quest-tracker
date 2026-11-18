@@ -41,7 +41,7 @@ jobs:
         run: |
           # The packaging config always comes from the commit this workflow runs from, so
           # fixes to it also apply when an older tag is re-packaged.
-          git show "$GITHUB_SHA:.pkgmeta" > "$RUNNER_TEMP/pkgmeta.yaml"
+          git show "$GITHUB_SHA:.github/pkgmeta.yml" > "$RUNNER_TEMP/pkgmeta.yaml"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
           # CurseForge shows the changelog file we upload on that file's Changelog tab. Send

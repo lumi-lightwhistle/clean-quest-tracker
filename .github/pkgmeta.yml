@@ -1,0 +1,17 @@
+# Packaging config, passed to the packager by the Package workflow (-m). The add-on is the
+# repository root: CleanQuestTracker.toc, Core/, Tracker/, UI/ and Media/. Everything else is
+# listed here to keep it out of the zip.
+package-as: CleanQuestTracker
+
+ignore:
+  - tools
+  - docs
+  - .github
+  - .gitattributes
+  - .gitignore
+  - README.md
+  - CLAUDE.md
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
