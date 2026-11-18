@@ -37,6 +37,22 @@ jobs:
           git show "$GITHUB_SHA:.pkgmeta" > "$RUNNER_TEMP/pkgmeta.yaml"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
+          # CurseForge shows the changelog file we upload on that file's Changelog tab. Send
+          # only this version's section, not the whole history. The full history stays in
+          # CHANGELOG.md on GitHub.
+          ver="${TAG#v}"
+          awk -v v="$ver" '
+            index($0, "## [" v "]") == 1 || index($0, "## " v " ") == 1 { on = 1 }
+            on && /^## / && index($0, v) == 0 { exit }
+            on { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if [ -s "$RUNNER_TEMP/notes.md" ]; then
+            cp "$RUNNER_TEMP/notes.md" CHANGELOG.md
+            echo "Release notes for $ver:"; cat CHANGELOG.md
+          else
+            echo "::warning::No section for $ver in CHANGELOG.md; uploading the whole file."
+          fi
+
           if [ -f CleanQuestTracker.toc ]; then
             echo "top=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
           else
