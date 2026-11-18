@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.6](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.5...v0.8.6) (2026-11-18)
+
+
+### 🧹 Under the hood
+
+* move the add-on to the repository root ([#10](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/10)) ([18bf421](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/18bf421045f0d51ccc93598b598ff3ef8a5d199f))
+
+
+### 📖 Docs
+
+* redesign README and CurseForge description ([#12](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/12)) ([0653070](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/0653070ad165222db90fc0e526d7eacbe446ec3f))
+
 ## [0.8.5](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.4...v0.8.5) (2026-11-18)
 
 
