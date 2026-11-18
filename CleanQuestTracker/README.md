@@ -2,7 +2,7 @@
 
 A quest tracker for World of Warcraft Forever (interface 16001). It groups your watched quests by zone, shows how many party members share each quest, adds animated progress bars, and sits in a frame you can move and resize.
 
-Version 0.8.4 <!-- x-release-please-version -->. Formerly Simple Quest Tracker and, before that, Quest Companion.
+Version 0.8.5 <!-- x-release-please-version -->. Formerly Simple Quest Tracker and, before that, Quest Companion.
 
 ## What it does
 
