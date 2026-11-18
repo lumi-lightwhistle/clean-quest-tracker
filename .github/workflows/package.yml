@@ -27,17 +27,28 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
-      - name: Use this workflow's packaging config and the tag's changelog
+      - name: Stage the add-on folder as its own repo
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
-          # The add-on lives in a subfolder, so the packager is pointed at it with -t.
-          # The packaging config comes from the commit this workflow runs from, so fixes
-          # to it also apply to older tags.
-          git show "$GITHUB_SHA:.pkgmeta" > "$RUNNER_TEMP/pkgmeta.yaml"
-          cp CHANGELOG.md CleanQuestTracker/CHANGELOG.md
+          # The packager wants the add-on at the root of a git checkout, but here it lives in
+          # the CleanQuestTracker subfolder. Build a small repo from that folder and tag it.
+          # The packaging config comes from the commit this workflow runs from, so fixes to it
+          # also apply to older tags.
+          stage="$RUNNER_TEMP/stage"
+          mkdir "$stage"
+          cp -a CleanQuestTracker/. "$stage/"
+          cp CHANGELOG.md "$stage/CHANGELOG.md"
+          git show "$GITHUB_SHA:.pkgmeta" > "$stage/.pkgmeta"
+          cd "$stage"
+          git init -q
+          git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "$TAG"
+          git tag "$TAG"
       - name: Package and upload
         uses: BigWigsMods/packager@v2
         with:
-          args: -t CleanQuestTracker -m ${{ runner.temp }}/pkgmeta.yaml ${{ inputs.dry_run && '-d' || '' }}
+          args: -t ${{ runner.temp }}/stage ${{ inputs.dry_run && '-d' || '' }}
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
