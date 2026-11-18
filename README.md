@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/icon-128.png" width="96" alt="Clean Quest Tracker icon">
+
 # Clean Quest Tracker
 
 **See what is left in your zone, and who in your party is on the same quest, without opening the quest log.**
