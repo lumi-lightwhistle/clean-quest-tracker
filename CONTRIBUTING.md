@@ -29,4 +29,4 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `feat: ...`, `
 
 ## How releases work
 
-Merged `feat` and `fix` changes collect in a "Release PR" that sets the next version in the `.toc` and writes `CHANGELOG.md`. Merging that PR tags the release and starts the Package workflow, which builds `CleanQuestTracker-<version>.zip` and uploads it to GitHub and CurseForge. Only the maintainer merges it.
+Only player-facing changes make a release: merged `feat`, `fix` and `perf` changes collect in a "Release PR" that sets the next version in the `.toc` and writes `CHANGELOG.md`. Merging that PR tags the release and starts the Package workflow, which builds `CleanQuestTracker-<version>.zip` and uploads it to GitHub and CurseForge. Only the maintainer merges it.
