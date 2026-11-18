@@ -15,6 +15,13 @@ on:
         required: false
         default: false
         type: boolean
+      version:
+        description: Version without the v, for the run name (optional, for example 0.8.5)
+        required: false
+        type: string
+
+# Shows in the Actions list as, for example, "release: CleanQuestTracker-0.8.5".
+run-name: "${{ inputs.dry_run && 'dry run' || 'release' }}: CleanQuestTracker-${{ inputs.version || inputs.tag }}"
 
 permissions:
   contents: write
@@ -77,6 +84,18 @@ jobs:
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+      - name: Attach the zip to the GitHub release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          # The packager only uploads to GitHub when it can see the repository, which the
+          # staged build for older tags hides, so attach the zip here in every case.
+          zip=$(find . "$RUNNER_TEMP/stage" -path '*/.release/*.zip' 2>/dev/null | head -n 1)
+          [ -n "$zip" ] || { echo "::error::No zip was built"; exit 1; }
+          gh release upload "$TAG" "$zip" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Attached $(basename "$zip") to $TAG"
       - name: Show what was built
         if: ${{ inputs.dry_run }}
         run: |
