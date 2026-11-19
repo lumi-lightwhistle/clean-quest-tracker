@@ -661,7 +661,7 @@ function M:QCQuest(quest, grouped)
 	local badgeX
 	if members then
 		badgeX = -right
-		right = right + Q.Party.BadgeWidth(#members) + 2
+		right = right + Q.Party.BadgeWidth() + 2
 	end
 	if right > 0 then
 		block:AdjustRightEdgeOffset(-right)

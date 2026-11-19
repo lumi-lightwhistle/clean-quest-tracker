@@ -388,12 +388,32 @@ local function TextWidth(text)
 	return math.ceil(measure:GetStringWidth() or 0)
 end
 
--- How wide the badge is for a count, in the current (or given) style. The tracker reserves this much room so titles
--- wrap clear of it.
-function P.BadgeWidth(count, style)
+-- Room for the widest label the badge can show at the current size and mode. Digits aren't all the same width in the
+-- game font ("1" is narrower than "2"), so sizing the badge to its own count would make badges differ in size and the
+-- layout shift whenever a count changed. Every badge uses this width, with its number centred in it. A party has at
+-- most four other members, so only 1 to 4 are measured. A zero (the font not ready yet) is never kept.
+local slotKey, slotWidth
+local function SlotWidth()
+	local key = LabelSize() .. Label(1)
+	if key ~= slotKey then
+		local widest = 0
+		for count = 1, 4 do
+			widest = math.max(widest, TextWidth(Label(count)))
+		end
+		if widest <= 0 then
+			return slotWidth or 0
+		end
+		slotKey, slotWidth = key, widest
+	end
+	return slotWidth
+end
+
+-- How wide the badge is, in the current (or given) style. It is the same for every count. The tracker reserves this
+-- much room so titles wrap clear of it.
+function P.BadgeWidth(style)
 	style = style or CurrentStyle()
 	local textMode = Q.db.partyStyle == "text"
-	local text = TextWidth(Label(count))
+	local text = SlotWidth()
 	if style == "plain" then
 		return text + 6 + (textMode and 0 or ICON_SIZE + 3)
 	elseif style == "split" then
@@ -605,7 +625,9 @@ local function Paint(badge, count, size, style)
 
 	Q.Font(label, LabelSize())
 	label:SetText(Label(count))
-	badge:SetWidth(P.BadgeWidth(count, style))
+	badge:SetWidth(P.BadgeWidth(style))
+	-- Centres this count's label in the shared width (a narrow "1" sits in the middle, not against the icon).
+	local nudge = math.floor((SlotWidth() - TextWidth(Label(count))) / 2)
 	fill:Hide()
 	edge:Hide()
 	block:Hide()
@@ -666,19 +688,19 @@ local function Paint(badge, count, size, style)
 	label:SetTextColor(textColor.r, textColor.g, textColor.b)
 	if style == "plain" then
 		if textMode then
-			label:SetPoint("RIGHT", -3, 0)
+			label:SetPoint("LEFT", 3 + nudge, 0)
 		else
 			icon:SetPoint("LEFT", 3, 0)
-			label:SetPoint("LEFT", icon, "RIGHT", 3, 0)
+			label:SetPoint("LEFT", icon, "RIGHT", 3 + nudge, 0)
 		end
 	elseif style == "split" then
 		icon:SetPoint("CENTER", block, "CENTER", 0, 0)
-		label:SetPoint("LEFT", textMode and 7 or SPLIT_ICON + 7, 0)
+		label:SetPoint("LEFT", (textMode and 7 or SPLIT_ICON + 7) + nudge, 0)
 	elseif textMode then
-		label:SetPoint("LEFT", PAD_LEFT + 2, 0)
+		label:SetPoint("LEFT", PAD_LEFT + 2 + nudge, 0)
 	else
 		icon:SetPoint("LEFT", PAD_LEFT, 0)
-		label:SetPoint("LEFT", icon, "RIGHT", ICON_GAP, 0)
+		label:SetPoint("LEFT", icon, "RIGHT", ICON_GAP + nudge, 0)
 	end
 end
 
