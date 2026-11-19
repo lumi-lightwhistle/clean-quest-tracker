@@ -9,10 +9,10 @@
 A quest tracker for World of Warcraft Forever.
 
 [![Latest release](https://img.shields.io/github/v/release/lumi-lightwhistle/clean-quest-tracker?color=e8bd68&label=release)](https://github.com/lumi-lightwhistle/clean-quest-tracker/releases/latest)
-[![CurseForge downloads](https://img.shields.io/curseforge/dt/1814563?color=e8bd68&label=CurseForge)](https://www.curseforge.com/wow/addons/clean-quest-tracker)
+[![CurseForge downloads](https://img.shields.io/curseforge/dt/1814563?color=e8bd68&label=CurseForge)](https://www.curseforge.com/wow/addons/cleanquesttracker)
 [![License: MIT](https://img.shields.io/badge/license-MIT-555555)](LICENSE)
 
-**[Download](https://www.curseforge.com/wow/addons/clean-quest-tracker)** &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Install](#install) &nbsp;·&nbsp; [Commands](#commands) &nbsp;·&nbsp; [Changelog](CHANGELOG.md) &nbsp;·&nbsp; [Report a bug](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/new?template=bug_report.yml)
+**[Download](https://www.curseforge.com/wow/addons/cleanquesttracker)** &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Install](#install) &nbsp;·&nbsp; [Commands](#commands) &nbsp;·&nbsp; [Changelog](CHANGELOG.md) &nbsp;·&nbsp; [Report a bug](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/new?template=bug_report.yml)
 
 </div>
 
@@ -33,61 +33,73 @@ A quest tracker for World of Warcraft Forever.
 
 <table>
 <tr>
-<td valign="top" width="58%">
+<td valign="middle" width="56%">
 
-### Quests by zone
+&nbsp;<br>
+**Quests by zone**
 
-Your current zone stays on top and the list re-sorts as you travel. Fold zones one at a time, pin focus to keep only your current zone open, or expand everything in one click.
-
-</td>
-<td valign="top"><img src="docs/screenshots/20-header-tooltip.png" width="320" alt="The zone tools on the Quests bar, with the Expand all zones tooltip."></td>
-</tr>
-<tr>
-<td valign="top">
-
-### Search
-
-Hover the Quests bar, click the magnifying glass and type part of a quest title or objective. The list narrows as you type, the matching letters are marked, and folded zones with a match open by themselves. Enter keeps the filter; Esc while typing, or the X, clears it.
+Your current zone stays on top and the list re-sorts as you travel. Fold zones one at a time, pin focus to keep only your current zone open, or expand everything in one click.<br>
+&nbsp;
 
 </td>
-<td valign="top"><img src="docs/screenshots/03-search-typing.png" width="320" alt="Searching for or, with five matches marked."></td>
+<td valign="middle" align="center"><img align="top" src="docs/screenshots/20-header-tooltip.png" width="320" alt="The zone tools on the Quests bar, with the Expand all zones tooltip."></td>
 </tr>
 <tr>
-<td valign="top">
+<td valign="middle">
 
-### Party questing
+&nbsp;<br>
+**Search**
 
-A badge shows how many group members also have each quest. Hover it to see who and how far along they are, even across the map with Questie. Click it to share the quest with anyone missing it.
+Hover the Quests bar, click the magnifying glass and type part of a quest title or objective. The list narrows as you type, the matching letters are marked, and folded zones with a match open by themselves. Enter keeps the filter; Esc while typing, or the X, clears it.<br>
+&nbsp;
 
 </td>
-<td valign="top"><img src="docs/screenshots/23-party-badge-tooltip.png" width="320" alt="The party badge tooltip with each member's progress."></td>
+<td valign="middle" align="center"><img align="top" src="docs/screenshots/03-search-typing.png" width="320" alt="Searching for or, with five matches marked."></td>
 </tr>
 <tr>
-<td valign="top">
+<td valign="middle">
 
-### Objective progress
+&nbsp;<br>
+**Party questing**
 
-Bars fill as you collect items and defeat enemies. Finished quests turn green and fold to a single line, in the order you tracked them, at the top of their zone, or at the bottom.
+A badge shows how many group members also have each quest. Hover it to see who and how far along they are, even across the map with Questie. Click it to share the quest with anyone missing it.<br>
+&nbsp;
 
 </td>
-<td valign="top"><img src="docs/screenshots/24-progress-bars.png" width="320" alt="Quests with progress bars part-way full."></td>
+<td valign="middle" align="center"><img align="top" src="docs/screenshots/23-party-badge-tooltip.png" width="320" alt="The party badge tooltip with each member's progress."></td>
 </tr>
 <tr>
-<td valign="top">
+<td valign="middle">
 
-### Yours to arrange
+&nbsp;<br>
+**Objective progress**
 
-Comfortable or Compact spacing, your own colours, six party badge styles and an optional dark panel. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.
+Bars fill as you collect items and defeat enemies. Finished quests turn green and fold to a single line, in the order you tracked them, at the top of their zone, or at the bottom.<br>
+&nbsp;
 
 </td>
-<td valign="top"><img src="docs/screenshots/08a-layout-comfortable.png" width="150" alt="The Comfortable preset."> <img src="docs/screenshots/08b-layout-compact.png" width="150" alt="The Compact preset."></td>
+<td valign="middle" align="center"><img align="top" src="docs/screenshots/24-progress-bars.png" width="320" alt="Quests with progress bars part-way full."></td>
 </tr>
 <tr>
-<td valign="top" colspan="2">
+<td valign="middle">
 
-### Behaves like the original
+&nbsp;<br>
+**Yours to arrange**
 
-Quest item buttons, map pins and the right-click menu work as they do in Blizzard's tracker, and shift-click links a quest in chat even with the chat box closed. The add-on never modifies Blizzard's tracker code.
+Comfortable or Compact spacing, your own colours, six party badge styles and an optional dark panel. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.<br>
+&nbsp;
+
+</td>
+<td valign="middle" align="center"><img align="top" src="docs/screenshots/08a-layout-comfortable.png" width="150" alt="The Comfortable preset."> <img align="top" src="docs/screenshots/08b-layout-compact.png" width="150" alt="The Compact preset."></td>
+</tr>
+<tr>
+<td valign="middle" colspan="2">
+
+&nbsp;<br>
+**Behaves like the original**
+
+Quest item buttons, map pins and the right-click menu work as they do in Blizzard's tracker, and shift-click links a quest in chat even with the chat box closed. The add-on never modifies Blizzard's tracker code.<br>
+&nbsp;
 
 </td>
 </tr>
@@ -95,7 +107,7 @@ Quest item buttons, map pins and the right-click menu work as they do in Blizzar
 
 ## Install
 
-- **CurseForge app:** search for *Clean Quest Tracker*, or open the [project page](https://www.curseforge.com/wow/addons/clean-quest-tracker).
+- **CurseForge app:** search for *Clean Quest Tracker*, or open the [project page](https://www.curseforge.com/wow/addons/cleanquesttracker).
 - **By hand:** download the zip from the [latest release](https://github.com/lumi-lightwhistle/clean-quest-tracker/releases/latest) and extract the `CleanQuestTracker` folder into `Interface/AddOns`. Restart the game fully the first time.
 
 ## Getting started

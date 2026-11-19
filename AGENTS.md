@@ -1,7 +1,7 @@
 # Clean Quest Tracker: notes for agents
 
 A quest tracker add-on for **WoW Forever** (interface 16001; retail-style UI with Classic-era content). Lua, no build
-step. Published on CurseForge as Clean Quest Tracker (slug `clean-quest-tracker`). It was formerly named Simple
+step. Published on CurseForge as Clean Quest Tracker (curseforge.com/wow/addons/cleanquesttracker, project 1814563). It was formerly named Simple
 Quest Tracker, and before that Quest Companion. Humans should start with `.github/CONTRIBUTING.md`; this file is the
 same ground for coding agents, plus the rules learned the hard way.
 
