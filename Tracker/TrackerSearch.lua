@@ -253,7 +253,8 @@ local function Place(block, fontString, used, mode, color)
 	local originX, originY = mode.relative and 0 or left, mode.relative and 0 or bottom
 	local boxWidth, boxHeight = fontString:GetWidth() or 0, fontString:GetHeight() or 0
 	for _, segment in ipairs(Segments(text, mode.raw)) do
-		local ok, areas = pcall(fontString.CalculateScreenAreaFromCharacterSpan, fontString, segment[1], segment[2])
+		-- The span's end is one past its last letter (Blizzard's chat selection passes #text + 1 to reach a line's end).
+		local ok, areas = pcall(fontString.CalculateScreenAreaFromCharacterSpan, fontString, segment[1], segment[2] + 1)
 		if not (ok and type(areas) == "table" and areas[1]) then
 			pendingRetry = true -- the line may not be measured yet; placed again next frame
 		else

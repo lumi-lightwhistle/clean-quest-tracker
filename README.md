@@ -20,12 +20,12 @@ A quest tracker for World of Warcraft Forever.
 
 <table align="center">
 <tr>
-<td valign="top"><img src="https://media.forgecdn.net/attachments/2230/54/by-zonepng-png.png" width="300" alt="Tracked quests grouped under zone headings, with finished quests in green."></td>
-<td valign="top"><img src="https://media.forgecdn.net/attachments/2230/50/party-number-png.png" width="420" alt="Party badge beside a quest, with a tooltip listing who has it."><br><img src="https://media.forgecdn.net/attachments/2230/51/config-2-png.png" width="420" alt="The settings window, open on the Layout page."></td>
+<td valign="top"><img src="docs/screenshots/25-tracker-overview-progress.png" width="260" alt="The tracker: quests grouped by zone, current zone open, progress bars filling."></td>
+<td valign="top"><img src="docs/screenshots/23-party-badge-tooltip.png" width="380" alt="The party badge tooltip, listing each member's progress on a quest."><br><br><img src="docs/screenshots/03-search-typing.png" width="380" alt="Searching the tracker, with the matching letters marked."></td>
 </tr>
 <tr>
-<td align="center"><sub>Quests grouped by zone, current zone first</sub></td>
-<td align="center"><sub>The party badge, and the settings window</sub></td>
+<td align="center"><sub>Quests by zone, current zone first</sub></td>
+<td align="center"><sub>Party progress, and search</sub></td>
 </tr>
 </table>
 
@@ -33,44 +33,61 @@ A quest tracker for World of Warcraft Forever.
 
 <table>
 <tr>
-<td valign="top" width="50%">
+<td valign="top" width="58%">
 
-**Quests by zone**<br>
-Your current zone stays on top and the list re-sorts as you travel. Fold zones one at a time, pin focus to keep only your current zone open, or expand and collapse everything in one click.
+### Quests by zone
 
-</td>
-<td valign="top" width="50%">
-
-**Search**<br>
-Click the magnifying glass and type part of a quest title or objective. The list narrows as you type, the matching letters are highlighted, and zones with a match open by themselves.
+Your current zone stays on top and the list re-sorts as you travel. Fold zones one at a time, pin focus to keep only your current zone open, or expand everything in one click.
 
 </td>
+<td valign="top"><img src="docs/screenshots/20-header-tooltip.png" width="320" alt="The zone tools on the Quests bar, with the Expand all zones tooltip."></td>
 </tr>
 <tr>
 <td valign="top">
 
-**Party questing**<br>
-A badge shows how many group members also have each quest. Hover it to see who and how far along they are; click it to share the quest with the people missing it.
+### Search
+
+Hover the Quests bar, click the magnifying glass and type part of a quest title or objective. The list narrows as you type, the matching letters are marked, and folded zones with a match open by themselves. Enter keeps the filter; Esc while typing, or the X, clears it.
 
 </td>
-<td valign="top">
-
-**Objective progress**<br>
-Bars fill as you collect items and defeat enemies. Finished quests turn green and fold to a single line.
-
-</td>
+<td valign="top"><img src="docs/screenshots/03-search-typing.png" width="320" alt="Searching for or, with five matches marked."></td>
 </tr>
 <tr>
 <td valign="top">
 
-**Yours to arrange**<br>
-Compact or Comfortable spacing, your own colours, six party badge styles and an optional dark panel. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.
+### Party questing
+
+A badge shows how many group members also have each quest. Hover it to see who and how far along they are, even across the map with Questie. Click it to share the quest with anyone missing it.
 
 </td>
+<td valign="top"><img src="docs/screenshots/23-party-badge-tooltip.png" width="320" alt="The party badge tooltip with each member's progress."></td>
+</tr>
+<tr>
 <td valign="top">
 
-**Behaves like the original**<br>
-Quest item buttons, map pins, the right-click menu and shift-click chat links work as they do in Blizzard's tracker. The add-on never modifies Blizzard's tracker code.
+### Objective progress
+
+Bars fill as you collect items and defeat enemies. Finished quests turn green and fold to a single line, in the order you tracked them, at the top of their zone, or at the bottom.
+
+</td>
+<td valign="top"><img src="docs/screenshots/24-progress-bars.png" width="320" alt="Quests with progress bars part-way full."></td>
+</tr>
+<tr>
+<td valign="top">
+
+### Yours to arrange
+
+Comfortable or Compact spacing, your own colours, six party badge styles and an optional dark panel. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.
+
+</td>
+<td valign="top"><img src="docs/screenshots/08a-layout-comfortable.png" width="150" alt="The Comfortable preset."> <img src="docs/screenshots/08b-layout-compact.png" width="150" alt="The Compact preset."></td>
+</tr>
+<tr>
+<td valign="top" colspan="2">
+
+### Behaves like the original
+
+Quest item buttons, map pins and the right-click menu work as they do in Blizzard's tracker, and shift-click links a quest in chat even with the chat box closed. The add-on never modifies Blizzard's tracker code.
 
 </td>
 </tr>
@@ -83,13 +100,15 @@ Quest item buttons, map pins, the right-click menu and shift-click chat links wo
 
 ## Getting started
 
-<img src="https://media.forgecdn.net/attachments/2230/61/settings-cog-png.png" width="300" alt="The settings cog beside the Quests heading." align="right">
+<img src="docs/screenshots/19-header-icons.png" width="300" alt="The Quests bar with its zone tools, search, cog, lock and minimise buttons." align="right">
 
-Hover the tracker's header and click the **cog**, or type `/cqt`, to open settings. Hover any setting to see the part of the tracker it changes, shaded in gold.
+Hover the tracker's header and click the **cog**, or type `/cqt`, to open settings. Hover any setting to see the part of the tracker it changes, shaded in gold. Settings that don't apply right now are greyed out and say why.
 
-Shift-click a quest to link it in chat. Right-click it to stop tracking.
+Shift-click a quest to link it in chat. Right-click it for the quest menu, including Stop tracking.
 
 <br clear="right">
+
+<p align="center"><img src="docs/screenshots/05-settings-layout.png" width="560" alt="The settings window, open on the Layout page."></p>
 
 ## Commands
 
@@ -103,7 +122,7 @@ Shift-click a quest to link it in chat. Right-click it to stop tracking.
 
 ## Works with
 
-- **Questie** gives party quest counts at any distance through its party sync.
+- **Questie** gives party quest counts and progress at any distance through its party sync.
 - **Spoken** adds its voiceover play buttons to your quests.
 - If another add-on shows its own quest tracker, turn that one off so your quests don't appear twice. Clean Quest Tracker hides Blizzard's tracker for you; switch that off in settings if you want it back for scenarios or achievements.
 

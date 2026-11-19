@@ -27,7 +27,8 @@ end
 local function Member(unit)
 	local name = Readable(UnitName(unit))
 	local _, class = UnitClass(unit)
-	return { unit = unit, name = name, class = Readable(class) }
+	-- `full` is "Name-Realm" for someone from another realm; Questie files its party data under it.
+	return { unit = unit, name = name, full = Readable(GetUnitName(unit, true)), class = Readable(class) }
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -89,6 +90,31 @@ local function QuestieNames(questID)
 	return names
 end
 
+-- One member's objectives on a quest as Questie last received them ({ [index] = { fulfilled, required, finished } }),
+-- or nil when Questie has nothing from them. This is what lets the tooltip show progress for members too far away
+-- for the game's own party-progress data.
+local function QuestieObjectives(questID, member)
+	local comms = QuestieComms()
+	if not comms then
+		return nil
+	end
+	local ok, players = pcall(comms.GetQuest, comms, questID)
+	if not ok or type(players) ~= "table" then
+		return nil
+	end
+	-- The full "Name-Realm" first, so two members who share a name on different realms can't be mixed up.
+	local exact = member.full and players[member.full]
+	if type(exact) == "table" then
+		return exact
+	end
+	for name, objectives in pairs(players) do
+		if Readable(name) and type(name) == "string" and type(objectives) == "table" and ShortName(name) == member.name then
+			return objectives
+		end
+	end
+	return nil
+end
+
 -- A source's answer: true, false, or "secret" when the client won't let add-on code read it.
 local function Answer(ok, value)
 	if not ok then
@@ -100,7 +126,8 @@ local function Answer(ok, value)
 	return value and value ~= 0 and true or false
 end
 
--- GUIDs of the party members listed in the quest's party-progress data, or nil when it can't be read.
+-- GUIDs of the party members listed in the quest's party-progress data, or nil when it can't be read. The second result
+-- is true when some member's line couldn't be read, so the set may be missing someone.
 local function ProgressGUIDs(questID)
 	local info = C_TooltipInfo and C_TooltipInfo.GetQuestPartyProgress
 	local lineTypes = Enum and Enum.TooltipDataLineType
@@ -108,24 +135,32 @@ local function ProgressGUIDs(questID)
 		return nil
 	end
 	-- The whole read is guarded: any field of tooltip data can come back restricted.
-	local ok, guids = pcall(function()
+	local ok, guids, partial = pcall(function()
 		local data = info(questID, true, true)
 		if type(data) ~= "table" or not Q.Readable(data.lines) or type(data.lines) ~= "table" then
 			return nil
 		end
-		local found
+		local found, missed = nil, false
 		for _, line in ipairs(data.lines) do
-			if type(line) == "table" and Readable(line.type) == lineTypes.QuestPlayer then
+			local lineType = type(line) == "table" and Readable(line.type)
+			if type(line) == "table" and not lineType then
+				missed = true
+			elseif lineType == lineTypes.QuestPlayer then
 				local guid = Readable(line.guid)
 				if type(guid) == "string" then
 					found = found or {}
 					found[guid] = true
+				else
+					missed = true
 				end
 			end
 		end
-		return found
+		return found, missed
 	end)
-	return ok and guids or nil
+	if not ok then
+		return nil
+	end
+	return guids, partial
 end
 
 -- What each source says about one unit: whether they count, then each source's answer. `cache.guids` holds the
@@ -371,8 +406,8 @@ end
 -- Tooltip
 ------------------------------------------------------------------------------------------------------------------------
 
--- The game's own party-progress tooltip lists each member with their objectives. Their names are recoloured to class
--- colours afterwards so the list reads like the raid frames.
+-- The game's own party-progress tooltip lists each member close by with their objectives. Their names are recoloured to
+-- class colours afterwards so the list reads like the raid frames; members it leaves out are added after it.
 local function RecolorNames(members)
 	local classes = {}
 	for _, member in ipairs(members) do
@@ -394,6 +429,90 @@ local function RecolorNames(members)
 	end
 end
 
+-- Whether the game's own tooltip already lists this member (it only lists members close by). Read from the same
+-- party-progress data the tooltip is built from (`guids`) when it can be; otherwise from the tooltip's text. If any line
+-- can't be read, the member counts as listed, since a second copy of someone is worse than a missing one.
+local function Listed(member, guids)
+	local guid = guids and Readable(UnitGUID(member.unit))
+	if guid then
+		return guids[guid] and true or false
+	end
+	local unreadable = false
+	for index = 1, GameTooltip:NumLines() do
+		local line = _G["GameTooltipTextLeft" .. index]
+		local text = line and Readable(line:GetText())
+		if text then
+			local plain = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+			if plain == member.name or plain == member.full or ShortName(plain) == member.name then
+				return true
+			end
+		elseif line then
+			unreadable = true
+		end
+	end
+	return unreadable
+end
+
+-- The objective names from your own quest log ("Smotts' Chest"), to label a member's counts. Questie sends only the
+-- counts, in the same order as the log.
+local function ObjectiveNames(questID)
+	local names = {}
+	local ok, objectives = pcall(C_QuestLog.GetQuestObjectives, questID)
+	if ok and type(objectives) == "table" then
+		for index, objective in ipairs(objectives) do
+			local text = type(objective) == "table" and Readable(objective.text)
+			if type(text) == "string" then
+				-- "0/1 Smotts' Chest" or "Smotts' Chest: 0/1" -> "Smotts' Chest"
+				text = text:gsub("^%s*%d+%s*/%s*%d+%s*", ""):gsub("%s*:?%s*%d+%s*/%s*%d+%s*$", "")
+				names[index] = text ~= "" and text or nil
+			end
+		end
+	end
+	return names
+end
+
+-- A member's name in their class colour, then their progress on each objective as Questie reports it, laid out like
+-- the game's own party-progress lines. Without Questie data the name stands alone, with a note when `nearbyNote` says
+-- the game's own list would show them once they come close.
+local function AddMemberProgress(member, questID, names, nearbyNote)
+	local color = ClassColor(member.class) or HIGHLIGHT_FONT_COLOR
+	GameTooltip:AddLine(member.name or UNKNOWN or "Unknown", color.r, color.g, color.b)
+	local objectives = QuestieObjectives(questID, member)
+	if not objectives then
+		if nearbyNote then
+			GameTooltip:AddLine("  Progress shows when they're nearby", GREY.r, GREY.g, GREY.b)
+		end
+		return
+	end
+	local indexes = {}
+	for index in pairs(objectives) do
+		if type(index) == "number" then
+			indexes[#indexes + 1] = index
+		end
+	end
+	table.sort(indexes)
+	local done = Q.CompleteColor()
+	for _, index in ipairs(indexes) do
+		local objective = objectives[index]
+		if type(objective) == "table" then
+			local have, need = tonumber(objective.fulfilled), tonumber(objective.required)
+			local finished = objective.finished or (have and need and have >= need)
+			local label = names[index] or ("Objective %d"):format(index)
+			local text
+			if have and need then
+				text = ("  - %d/%d %s"):format(have, need, label)
+			else
+				text = ("  - %s%s"):format(label, finished and "" or " (not done)")
+			end
+			local tint = finished and done or HIGHLIGHT_FONT_COLOR
+			GameTooltip:AddLine(text, tint.r, tint.g, tint.b)
+		end
+	end
+	if #indexes == 0 then
+		GameTooltip:AddLine("  - " .. (QUEST_WATCH_QUEST_READY or "Ready for turn-in"), done.r, done.g, done.b)
+	end
+end
+
 local function CanShare(questID, missing)
 	return Q.db.partyShare and #missing > 0 and C_QuestLog.IsPushableQuest(questID)
 end
@@ -407,16 +526,27 @@ local function ShowTooltip(badge)
 	if GameTooltip.SetQuestPartyProgress then
 		native = pcall(GameTooltip.SetQuestPartyProgress, GameTooltip, questID) and GameTooltip:NumLines() > 0
 	end
+	local names = ObjectiveNames(questID)
 	if native then
 		RecolorNames(members)
+		-- The game lists only members close by; anyone else on the quest is added with Questie's copy of their progress.
+		-- A set with an unreadable line may be missing someone, so the text check (which errs towards "listed") decides.
+		local guids, partial = ProgressGUIDs(questID)
+		if partial then
+			guids = nil
+		end
+		for _, member in ipairs(members) do
+			if not Listed(member, guids) then
+				AddMemberProgress(member, questID, names, true)
+			end
+		end
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(summary, FULL.r, FULL.g, FULL.b)
 	else
 		GameTooltip:SetText(C_QuestLog.GetTitleForQuestID(questID) or "", FULL.r, FULL.g, FULL.b)
 		GameTooltip:AddLine(summary, 1, 1, 1)
 		for _, member in ipairs(members) do
-			local color = ClassColor(member.class) or HIGHLIGHT_FONT_COLOR
-			GameTooltip:AddLine(member.name or UNKNOWN or "Unknown", color.r, color.g, color.b)
+			AddMemberProgress(member, questID, names, false)
 		end
 	end
 	if #missing > 0 then

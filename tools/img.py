@@ -1,5 +1,5 @@
 """Tiny pure-Python image helpers: read/write 32-bit TGA, write PNG, and draw anti-aliased shapes from distance
-functions. Icons are white with alpha, as the add-on tints them in game."""
+functions. Add-on textures are white with alpha, as the add-on tints them in game; card_icons.py also writes colour PNGs."""
 import math
 import struct
 import zlib

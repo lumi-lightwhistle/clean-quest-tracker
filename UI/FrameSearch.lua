@@ -13,6 +13,9 @@ local ICON_SIZE = 18
 local EDIT_HEIGHT = 20 -- the text field inside the box (the box itself is as tall as the bar)
 local BOX_RIGHT = 68 -- the box stops short of the cog and padlock
 local CLOSED_WIDTH = ICON_SIZE + 4
+-- The text field's room inside the box: it starts after the glass (4 in, 13 wide, 3 gap) and stops short of the count
+-- (24 from the right) and the X (18 wide, 2 in), with room for a count like "12/25".
+local EDIT_LEFT, EDIT_RIGHT = 20, 58
 local WIDTH_TWEEN = "qc-search-width"
 -- Forever palette, as in the settings window.
 local PANEL = { 0.071, 0.059, 0.047 }
@@ -185,6 +188,10 @@ function F.PlaceSearch()
 	box:ClearAllPoints()
 	box:SetPoint("TOPLEFT", header, "TOPLEFT", LeftOffset() - 2, 0)
 	box:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", LeftOffset() - 2, 0)
+	-- The text field keeps its full width while the box grows open around it (the box clips it). If it grew with the
+	-- box, letters typed straight after the click would scroll the text sideways, and the game doesn't scroll it back,
+	-- so "or" could show as "r".
+	edit:SetWidth(math.max(1, FullWidth() - EDIT_LEFT - EDIT_RIGHT))
 	if open and not Q.Motion.Target(WIDTH_TWEEN) then
 		box:SetWidth(FullWidth())
 	end
@@ -287,8 +294,7 @@ end
 
 local function CreateEdit()
 	edit = CreateFrame("EditBox", nil, box)
-	edit:SetPoint("LEFT", 20, 0)
-	edit:SetPoint("RIGHT", -58, 0)
+	edit:SetPoint("LEFT", EDIT_LEFT, 0) -- its width is set in PlaceSearch
 	edit:SetHeight(EDIT_HEIGHT)
 	edit:SetAutoFocus(false)
 	edit:SetMaxLetters(40)

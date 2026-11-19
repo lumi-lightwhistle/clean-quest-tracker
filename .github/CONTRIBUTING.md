@@ -13,7 +13,7 @@ The repository root is the add-on folder. `CleanQuestTracker.toc` lists the load
 | `UI/` | The tracker frame, the search box and the settings window |
 | `Media/` | Textures |
 | `tools/` | Dev scripts (not shipped) |
-| `docs/` | The CurseForge page text and icons (not shipped) |
+| `docs/` | The CurseForge page text, its icons, and the screenshots the README and CurseForge page use (not shipped) |
 
 A new Lua file must be listed in the `.toc` with its folder, for example `Tracker\TrackerZones.lua`. CI fails if a file is missing from the `.toc` or the `.toc` lists one that doesn't exist.
 
