@@ -6,6 +6,14 @@ Quest Tracker, and before that Quest Companion. Humans should start with `.githu
 same ground for coding agents, plus the rules learned the hard way.
 
 ## Do this on every change
+**Before the first edit, start a new branch from fresh `main`.** Run `git fetch origin`, then
+`git switch -c <type>/<short-name> origin/main` (or `git worktree add -b <type>/<short-name> <path> origin/main` when
+the current checkout has uncommitted work you must not disturb). All new work goes on its own branch off the latest
+`origin/main`, one piece of work per branch and per pull request. Never continue on whatever branch the checkout
+happens to be on, even if it looks related: an old feature branch carries its earlier commits into the new pull
+request and conflicts with `main`. If you notice you are on the wrong branch after editing, stop and say so before
+committing.
+
 1. **Before any commit, run the `pre-commit-review` skill** (`.claude/skills/pre-commit-review/SKILL.md`): `python tools/prereview.py`, then independent reviewer agents over the changed files, sized to the change (the skill's step 0: small fixes need only the script plus one light reviewer; the full review is for new settings, migrations, presets and releases). Fix what they find or say why not. Committing and pushing still happen only when the user asks.
    - In Claude Code a hook (`tools/commit_gate.py`, configured in `.claude/settings.json`) also blocks `git commit` (from the Bash and PowerShell tools) while `tools/prereview.py` is failing. It needs `python` on the path.
    - Other agents have no hook: run `python tools/prereview.py` yourself and follow the skill's steps by hand. The reviewer step needs the ability to start separate reviewer agents; if you cannot, say so and ask for a human review.
