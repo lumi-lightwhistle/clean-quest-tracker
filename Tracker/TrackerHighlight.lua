@@ -26,6 +26,8 @@ end
 
 -- What each highlight key shades, per block. Returns how many textures it used.
 local SHADERS = {}
+-- Band shades a stretch of a region going down (offsets from its top); Strip, below, a stretch going across (offsets
+-- from its left).
 local function Band(index, region, top, bottom, left, right)
 	local texture = Shade(index)
 	texture:SetPoint("TOPLEFT", region, "TOPLEFT", left or 0, top)
@@ -37,6 +39,24 @@ local function Around(index, region, pad)
 	pad = pad or 2
 	texture:SetPoint("TOPLEFT", region, "TOPLEFT", -pad, pad)
 	texture:SetPoint("BOTTOMRIGHT", region, "BOTTOMRIGHT", pad, -pad)
+	return 1
+end
+-- Shades each shown frame in a table of them. Returns how many textures it used.
+local function EachShown(index, frames, pad)
+	local used = 0
+	for _, frame in pairs(frames or {}) do
+		if frame:IsShown() then
+			used = used + Around(index + used, frame, pad)
+		end
+	end
+	return used
+end
+
+-- A strip of the block's height, between two distances from its left edge (negative is leftwards).
+local function Strip(index, block, left, right)
+	local texture = Shade(index)
+	texture:SetPoint("TOPLEFT", block, "TOPLEFT", left, 0)
+	texture:SetPoint("BOTTOMRIGHT", block, "BOTTOMLEFT", right, 0)
 	return 1
 end
 function SHADERS.qg(block, index)
@@ -56,12 +76,16 @@ function SHADERS.ind(block, index)
 	if block.qcZone then
 		return 0
 	end
-	-- From where zone names start (or the left edge, without zones) to where the quest starts.
-	local width = math.max(4, (block.offsetX or 0) - (Q.db.grouping and ZONE_OFFSET_X or 0))
-	local texture = Shade(index)
-	texture:SetPoint("TOPLEFT", block, "TOPLEFT", -width, 0)
-	texture:SetPoint("BOTTOMRIGHT", block, "BOTTOMLEFT", -2, 0)
-	return 1
+	local offset = block.offsetX or 0
+	if T.PoiShown() then
+		-- With quest focus icons on, the indent is the space from the list's left edge to the icon, so the shading
+		-- sits to the left of the icon (always a sliver, so it can be seen at 0).
+		local icon = T.POI_GAP + T.PoiSize()
+		return Strip(index, block, -offset, math.max(-offset + 4, -icon))
+	end
+	-- Otherwise from where zone names start (or the left edge, without zones) to where the quest starts.
+	local width = math.max(4, offset - (Q.db.grouping and ZONE_OFFSET_X or 0))
+	return Strip(index, block, -width, -2)
 end
 function SHADERS.fs(block, index)
 	return not block.qcZone and Around(index, block, 1) or 0
@@ -70,6 +94,19 @@ function SHADERS.lvl(block, index)
 	return not block.qcZone and Around(index, block.HeaderText) or 0
 end
 SHADERS.diff = SHADERS.lvl
+-- The lines under a quest's title (its objectives, and the waypoint and completion lines).
+function SHADERS.obj(block, index)
+	return not block.qcZone and EachShown(index, block.usedLines, 1) or 0
+end
+-- The number at the right of a zone heading.
+function SHADERS.zcount(block, index)
+	return (block.qcZone and block.qcCount and block.qcCount:IsShown()) and Around(index, block.qcCount, 2) or 0
+end
+-- The round quest icon beside each title.
+function SHADERS.poi(block, index)
+	local button = block.poiButton
+	return (not block.qcZone and button and button:IsShown()) and Around(index, button, 1) or 0
+end
 function SHADERS.done(block, index)
 	return (not block.qcZone and block.qcComplete) and Around(index, block.HeaderText) or 0
 end
@@ -86,13 +123,7 @@ function SHADERS.party(block, index)
 	return (block.qcBadge and block.qcBadge:IsShown()) and Around(index, block.qcBadge, 1) or 0
 end
 function SHADERS.bars(block, index)
-	local used = 0
-	for _, bar in pairs(block.qcBars or {}) do
-		if bar:IsShown() then
-			used = used + Around(index + used, bar, 2)
-		end
-	end
-	return used
+	return EachShown(index, block.qcBars, 2)
 end
 
 function T.HighlightActive()

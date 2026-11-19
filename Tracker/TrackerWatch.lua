@@ -52,13 +52,20 @@ function T.StartWatching()
 	end
 	pcall(watcher.RegisterUnitEvent, watcher, "UNIT_QUEST_LOG_CHANGED", "player")
 	watcher:SetScript("OnEvent", function(_, event, arg1)
-		if not Q.Active() then
-			return
-		end
 		if event == "CVAR_UPDATE" then
 			if Q.Readable(arg1) and arg1 == "questPOI" then
-				T.MarkDirty(true)
+				if Q.Active() then
+					T.MarkDirty(true)
+				end
+				-- The settings window shows this setting too (and the indent that depends on it), even while the
+				-- add-on is switched off.
+				if Q.Options and Q.Options.Refresh then
+					Q.Options.Refresh()
+				end
 			end
+			return
+		end
+		if not Q.Active() then
 			return
 		end
 		if event ~= "BAG_UPDATE_DELAYED" then

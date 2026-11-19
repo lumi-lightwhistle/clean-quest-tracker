@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import os,subprocess,sys; p=os.path.join(os.environ.get('CLAUDE_PROJECT_DIR','.'),'tools','commit_gate.py'); sys.exit(subprocess.call([sys.executable,p]) if os.path.exists(p) else 0)\""
+          }
+        ]
+      }
+    ]
+  }
+}

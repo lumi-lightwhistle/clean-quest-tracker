@@ -2,9 +2,12 @@
 Releases/
 .release/
 
-# Local agent notes (contain machine paths and account details)
-CLAUDE.md
-.claude/
+# Local agent notes (contain machine paths and account details). CLAUDE.md and AGENTS.md are shared.
+CLAUDE.local.md
+# Agent settings stay local, except the shared skills and the commit hook
+.claude/*
+!.claude/skills/
+!.claude/settings.json
 **/undefined/
 
 # OS / editor

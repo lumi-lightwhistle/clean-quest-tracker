@@ -67,25 +67,62 @@ end
 
 -- Same as ObjectiveTrackerQuestPOIBlockMixin:GetPOIButton / CheckAndReleasePOIButton, with a private button pool.
 local poiPool
-local POI_SCALE = 0.875
+local POI_NATIVE_SIZE = 32 -- the template's own size
+local POI_GAP = T.POI_GAP -- between the icon and the title (set in Tracker.lua, which also sizes the room for the icon)
+
+-- The icon's size is a setting (Layout page). Scaling rather than resizing keeps every texture layer in the template in
+-- proportion.
+local function PoiScale()
+	return T.PoiSize() / POI_NATIVE_SIZE
+end
+
 local function BlockGetPOIButton(self, style)
 	local button = self.poiButton
 	if not button then
 		poiPool = poiPool or CreateFramePool("BUTTON", nil, "ObjectiveTrackerPOIButtonTemplate")
 		button = poiPool:Acquire()
 		button:SetParent(self)
-		-- 28px instead of the template's 32px, so the icon sits snug beside the title. Scaling (rather than resizing)
-		-- keeps every texture layer in the template in proportion.
-		button:SetScale(POI_SCALE)
 		button:SetQuestID(self.poiQuestID)
 		self.poiButton = button
 		self:SetExtraAddAnimation(button.AddAnim)
 	end
+	-- Every time, so a change of size in settings reaches icons that already exist.
+	button:SetScale(PoiScale())
 	button:SetStyle(style)
 	button:SetSelected(self.poiIsSuperTracked)
 	button:UpdateButtonStyle()
 	button:Show()
 	return button
+end
+
+-- Height of the first line of the title (a long title wraps, and the icon belongs beside its first line).
+local function FirstLineHeight(text)
+	local height = text:GetStringHeight() or 0
+	local lines = text.GetNumLines and text:GetNumLines() or 1
+	if lines and lines > 1 then
+		height = height / lines
+	end
+	-- An unmeasured title reads as 0 high; use the text size so the icon is not pinned to the top edge.
+	return height > 0 and height or (Q.db.fontSize or Q.defaults.fontSize)
+end
+
+-- Same as ObjectiveTrackerQuestPOIBlockMixin:AddPOIButton, except the icon is centred on the title's first line.
+-- Blizzard hangs it from the top of the title, which leaves a large icon sitting high.
+local function BlockAddPOIButton(self)
+	local style
+	if self.poiIsWorldQuest then
+		style = POIButtonUtil.Style.WorldQuest
+	elseif self.poiIsComplete then
+		style = POIButtonUtil.Style.QuestComplete
+	else
+		style = POIButtonUtil.Style.QuestInProgress
+	end
+	local button = self:GetPOIButton(style)
+	local scale = button:GetScale()
+	button:ClearAllPoints()
+	-- Offsets count in the button's own (scaled) units.
+	button:SetPoint("RIGHT", self.HeaderText, "TOPLEFT", -POI_GAP / scale, -(FirstLineHeight(self.HeaderText) / 2) / scale)
+	button:SetPingWorldMap(nil)
 end
 
 local function BlockReleasePOIButton(self)
@@ -106,6 +143,7 @@ function T.PatchBlock(block)
 	block.FreeLine = BlockFreeLine
 	if block.GetPOIButton then
 		block.GetPOIButton = BlockGetPOIButton
+		block.AddPOIButton = BlockAddPOIButton
 		block.CheckAndReleasePOIButton = BlockReleasePOIButton
 	end
 end
