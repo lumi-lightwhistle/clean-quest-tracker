@@ -42,6 +42,17 @@ function T.PoiShown()
 	return GetCVarBool("questPOI") and true or false
 end
 
+-- Focus mode is on when the Extras switch is on and the Quests bar's target button is lit.
+function T.FocusModeOn()
+	return Q.db and Q.db.superFocus and Q.db.focusQuest and true or false
+end
+
+-- The target button: lights focus mode on or off and redraws.
+function T.ToggleFocusMode()
+	Q.db.focusQuest = not Q.db.focusQuest
+	T.MarkDirty()
+end
+
 -- The icon's width in pixels: the setting, whole and never tiny. The one place that reads it.
 function T.PoiSize()
 	local size = tonumber(Q.db and Q.db.poiSize) or Q.defaults.poiSize
@@ -69,6 +80,7 @@ local module, container -- also T.module and T.container once created
 local dirty = false
 local instantNext = false -- the next redraw skips the glide
 local completeSeen = {} -- questID -> complete at the last redraw, for the completion glow
+local focusID -- while focus mode folds the other quests: the one quest that keeps its objectives
 local Motion = Q.Motion
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -641,6 +653,11 @@ function M:QCQuest(quest, grouped)
 		or (QuestMapFrame_GetFocusedQuestID and QuestMapFrame_GetFocusedQuestID() == questID)
 	local isSequenced = IsQuestSequenced and IsQuestSequenced(questID) or false
 	local block, isExisting = self:GetBlock(questID)
+	local folded = focusID and questID ~= focusID
+	-- A block folded by focus mode has no lines, so opening it again is not a new objective arriving (which would
+	-- play the sequenced-quest sound).
+	isExisting = isExisting and not block.qcFolded
+	block.qcFolded = folded
 	block.offsetX = T.QuestOffset(grouped)
 	block.qcGroup = grouped and quest.zone or nil
 	self:AnchorBlock(block)
@@ -679,7 +696,10 @@ function M:QCQuest(quest, grouped)
 	end
 
 	local waypoint = showWaypoint and C_QuestLog.GetNextWaypointText and C_QuestLog.GetNextWaypointText(questID)
-	if isComplete then
+	if folded then
+		-- Focus mode: every quest but the focused one shows its title alone. Nothing is added, so the objective lines,
+		-- bars and timers it had are released at the end of this layout.
+	elseif isComplete then
 		-- Finished: the objectives play Blizzard's check-and-fade, then the quest collapses to its title. Quests that
 		-- complete from the tracker keep their "click to complete" line, since that is how they are turned in.
 		local completing = self:QCObjectives(block, questID, logIndex, true, isSequenced, isExisting)
@@ -738,6 +758,17 @@ function M:LayoutContents()
 	local db = Q.db
 	local list = Collect()
 	self.qcCount, self.qcTotal = #list, #list
+	-- Focus mode needs the focused quest to be in the list; otherwise nothing is folded.
+	focusID = nil
+	if T.FocusModeOn() then
+		local superTracked = C_SuperTrack.GetSuperTrackedQuestID()
+		for _, quest in ipairs(list) do
+			if quest.id == superTracked then
+				focusID = superTracked
+				break
+			end
+		end
+	end
 	local groups = Group(list)
 	-- Zone names come from the whole list, so the zone tools (focus, expand all) see every zone while searching.
 	local names = {}

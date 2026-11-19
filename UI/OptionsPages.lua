@@ -7,6 +7,7 @@
 --   options      a choice's { value, label } pairs
 --   get, set     a toggle that mirrors something that isn't a saved setting here (the game's questPOI)
 --   onEnable     a toggle's extra work when it is switched on
+--   icon         a toggle's texture, drawn before its label
 --   kFn          a slider that edits one of two saved settings, chosen by a function (the quest indent)
 --   run, parts   a button's action; an inset's labels, bullets and text
 -- A row that only matters while another setting is set carries `enabledBy` (a saved switch that must be on),
@@ -18,6 +19,7 @@
 --   Quests   what the tracker shows, and in what order
 --   Layout   sizes and spacing; the preset sets the groups marked as such
 --   Colours, Party, Search, Animations  as the names say
+--   Extras   optional features that are off by default, kept apart from the settings every player has
 
 local _, Q = ...
 local O = Q.Options
@@ -47,6 +49,8 @@ end
 local function IndentKey()
 	return IconsOn() and "poiIndent" or "indent"
 end
+
+local TARGET_ICON = "Interface\\AddOns\\CleanQuestTracker\\Media\\FocusTarget" -- the Quests bar's focus mode button
 
 local NEEDS_ZONES = "Turn on Group quests by zone (Quests page) to use this"
 local NEEDS_BARS = "Turn on Show progress bars (Quests page) to use this"
@@ -210,6 +214,17 @@ O.PAGES = {
 					{ "label", "Always" },
 					{ "text", "Nothing animates during combat; the list snaps to its new layout instead. Progress bars always ease to their new value, even on None." },
 				} },
+			} },
+		},
+	},
+	{
+		name = "Extras",
+		note = "Optional extras, off until you want them",
+		groups = {
+			{ "Quest focus", nil, {
+				{ "toggle", k = "superFocus", hl = "target", icon = TARGET_ICON, onEnable = function()
+					Q.db.focusQuest = false -- starts unlit each time, so the list never folds before the button is clicked
+				end, label = "Super focus mode", note = "Adds a target button to the Quests bar. Click it to turn focus mode on or off. While on, every quest except the one you focus (its round icon, or Focus in its right-click menu) folds down to its title" },
 			} },
 		},
 	},
