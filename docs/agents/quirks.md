@@ -12,6 +12,10 @@ Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this i
   (from the zone name).
 - **Quest item buttons are secure.** No layout moves while they are on screen in combat; catch up on
   `PLAYER_REGEN_ENABLED`.
+- **Scale animations stretch on a moving row.** Blizzard's check-mark flash on an objective line scales the check and
+  a glow; if the row moves while it plays, the game draws them stretched and oversized. So a quest that moves as it
+  completes (finished quests sorted to the top or bottom) folds to its title at once and only glides (`moves` in
+  `M:QCObjectives` and `M:QCQuest`).
 - **Redraws:** quest events alone are not enough. The watcher in `Tracker/TrackerWatch.lua` (including
   `QUEST_WATCH_UPDATE`) plus a once-a-second signature check keep the list current. Don't "optimise" either away
   without proving the list still updates.

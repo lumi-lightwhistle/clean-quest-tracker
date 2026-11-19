@@ -570,6 +570,9 @@ end
 function M:QCObjectives(block, questID, logIndex, isComplete, isSequenced, isExisting)
 	local db = Q.db
 	local S = ObjectiveTrackerAnimLineState
+	-- Finished quests sorted to the top or bottom move as they complete. The move is their only animation: they fold to
+	-- their title at once, since Blizzard's check-mark flash is drawn stretched and oversized on a row that is moving.
+	local moves = db.completeOrder == "top" or db.completeOrder == "bottom"
 	local done = Q.CompleteColor()
 	local hideDash = OBJECTIVE_DASH_STYLE_HIDE
 	local completing = false
@@ -582,6 +585,8 @@ function M:QCObjectives(block, questID, logIndex, isComplete, isSequenced, isExi
 			if isComplete then
 				if not db.foldComplete then
 					line = AddLine(block, index, text, hideDash, done)
+				elseif moves then
+					line = nil -- folded at once: the line is not added, so it is released at the end of this layout
 				elseif line and line.state ~= S.Faded then
 					line = AddLine(block, index, text, hideDash, done)
 					if not line.state or line.state == S.Present then
@@ -691,7 +696,9 @@ function M:QCQuest(quest, grouped)
 	local wasComplete = completeSeen[questID]
 	completeSeen[questID] = isComplete
 	block.qcComplete = isComplete
-	if isComplete and wasComplete == false then
+	-- A quest that moves as it completes (finished quests sorted to the top or bottom) only glides; see QCObjectives.
+	local moves = db.completeOrder == "top" or db.completeOrder == "bottom"
+	if isComplete and wasComplete == false and not moves then
 		T.Glow(block)
 	end
 
@@ -732,6 +739,10 @@ function M:QCQuest(quest, grouped)
 
 	if hasItem then
 		block.height = math.max(block.height, ITEM_SIZE)
+	end
+	-- A row with a party badge is at least as tall as the badge plus a gap, so badges never touch the one above or below.
+	if members then
+		block.height = math.max(block.height, Q.Party.MinRow())
 	end
 	-- The module skips Blizzard's shared POI check (showWorldQuests), so the quest-POI setting is honoured here. A short
 	-- row (a finished quest folded to its title) is stretched to hold its icon, so icons never overlap.

@@ -19,6 +19,17 @@
 - The PR title becomes the changelog line. Use the `changelog` skill. `feat`, `fix`, `perf` and `refactor` reach
   players; `docs`, `chore`, `ci`, `test` do not.
 
+## Testing in game
+- Nothing runs from here, so a change is tried by copying the changed files into the installed add-on
+  (`...\_forever_\Interface\AddOns\CleanQuestTracker`, same paths as the repo) and typing `/reload` in the open
+  game. Only when the user asks, and never start a second game client.
+- **Don't make backups when copying.** Git is the backup: the repo (and `origin/main`) holds every original. Compare
+  the installed file with `origin/main` (ignore line endings), then copy over it and check with `cmp`. Save a copy
+  elsewhere only if the installed file differs from every commit, and never inside `AddOns` (a folder with a `.toc`
+  there loads as a second add-on). Saved settings are not in git; leave them alone.
+- `/cqt fakeparty 1-4` pretends that many party members have every tracked quest (`/cqt fakeparty` turns it off), so
+  party badges can be checked without a group.
+
 ## Reviews
 - `pre-commit-review` skill, step 0 sizes the review: small = script plus one light diff-only reviewer; normal = full
   review in groups of about 400 changed lines; risky (migrations, `Q.SCHEMA`, presets, taint-sensitive code,

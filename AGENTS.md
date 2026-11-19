@@ -15,7 +15,9 @@ Read this whole file; it is short on purpose. Detail lives in `docs/agents/`, op
 3. **Make the change small.** Defaults must match what players have today unless the task is to change them.
    Match the file's style: header comment, `-----` section banners (the map is built from them).
 4. **Check.** `python tools/luacheck.py <file>` on every Lua file you touch, then `python tools/prereview.py`
-   (syntax, `.toc`, unread settings, highlight keys, stale wording; it also refreshes `docs/REPOMAP.md`).
+   (syntax, `.toc`, unread settings, highlight keys, stale wording; it also refreshes `docs/REPOMAP.md`). To try a
+   change in game, copy the changed files over the installed add-on and `/reload`; **make no backup copies, git is
+   the backup** (`docs/agents/workflow.md`).
 5. **Review, sized to the change** (`pre-commit-review` skill, step 0): small fix = script plus one light reviewer;
    new setting, migration, preset or release = full review.
 6. **Ship.** PR title is the changelog line: Conventional Commits, written for players (`changelog` skill). Fill in
