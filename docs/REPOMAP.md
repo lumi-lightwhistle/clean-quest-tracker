@@ -20,15 +20,15 @@ Thin rounded progress bars under counted objectives, with an eased fill animatio
 
 - **(top)** L1: Q.CompleteColor L9, Pieces L13, Paint L23, Draw L49, Animate L60, Q.NewProgressBar L73, Q.SetBarInset L91, Q.SetBarProgress L98, Q.PreviewProgress L115
 
-## Tracker/Party.lua (829 lines)
+## Tracker/Party.lua (812 lines)
 
 Party badge: how many other members of your party have each quest, who they are, and one-click sharing.
 
-- **(top)** L1: Readable L13, ClassColor L17, Member L27, QuestieComms L50, ShortName L68, QuestieNames L73, QuestieObjectives L96, Answer L119, ProgressGUIDs L131, Check L169, P.Members L200, P.Count L224, P.Report L240, Show L245, Missing L297, LabelSize L315, Label L319, CurrentStyle L357, Shade L362, SetShape L368, TextWidth L380, SlotWidth L396, P.BadgeWidth L413
-- **Tooltip** L425: RecolorNames L431, Listed L455, ObjectiveNames L478, AddMemberProgress L497, CanShare L536, ShowTooltip L540
-- **Badge** L581: OnClick L584, Build L598, Paint L619, Create L710, P.CreatePreview L727, preview:ShowStyle L730, Pop L740, P.Attach L766, P.Detach L789, HookQuestie L808, Changed L814
+- **(top)** L1: Readable L13, ClassColor L17, Member L27, QuestieComms L50, ShortName L68, QuestieNames L73, QuestieObjectives L96, Answer L119, ProgressGUIDs L131, Check L169, P.Members L200, P.Count L231, P.Report L250, Show L255, Missing L307, LabelSize L325, Label L329, CurrentStyle L368, Shade L373, SetShape L379, TextWidth L391, SlotWidth L407, P.MinRow L425, P.BadgeWidth L431
+- **Tooltip** L443: RecolorNames L449, Listed L473, ObjectiveNames L496, AddMemberProgress L515, CanShare L554, ShowTooltip L558
+- **Badge** L599: OnClick L602, Build L616, Paint L637, Create L728, P.CreatePreview L745, preview:ShowStyle L748, P.Attach L754, P.Detach L772, HookQuestie L791, Changed L797
 
-## Tracker/Tracker.lua (1007 lines)
+## Tracker/Tracker.lua (1018 lines)
 
 The quest list: Clean Quest Tracker's own objective tracker module, built from Blizzard's module and block templates. The module is a private instance. Its methods are overridden on this instance only; Blizzard's QuestObjectiveTracker and...
 
@@ -37,8 +37,8 @@ The quest list: Clean Quest Tracker's own objective tracker module, built from B
 - **Watched quests, grouped by quest-log zone** L140: ReadZones L143, Displayable L158, Collect L170, SortFinished L207, Group L221, T.Title L260
 - **Lines and progress bars** L283: AddLine L289, MarkBarsUnused L296, HideUnusedBars L302, AddBar L312
 - **Quest menu (right-click), matching Blizzard's entries** L334: OpenQuestMenu L337
-- **Module overrides (this instance only)** L381: M:InitModule L386, M:CanUpdate L391, M:GetContextMenuParent L395, M:AcquireFrame L400, M:FreeBlock L409, M:FreeUnusedTimerBars L417, M:FreeUnusedProgressBars L426, M:FreeUnusedRightEdgeFrames L438, M:BeginLayout L450, M:OnEvent L474, M:OnBlockHeaderClick L493, M:OnBlockHeaderEnter L520, M:OnBlockHeaderLeave L536, M:OnFreeBlock L547, M:QCObjectives L570, M:QCQuest L647, M:LayoutContents L756
-- **Public** L822: T.QuestOffset L828, T.IsDirty L836, T.MarkDirty L841, T.Update L852, T.Rebuild L895, T.OnCombatEnded L910, WantNativeHidden L923, T.ApplyNativeVisibility L927, T.Create L960, container:IsCollapsed L964, container:ForceExpand L967, container:MarkDirty L972
+- **Module overrides (this instance only)** L381: M:InitModule L386, M:CanUpdate L391, M:GetContextMenuParent L395, M:AcquireFrame L400, M:FreeBlock L409, M:FreeUnusedTimerBars L417, M:FreeUnusedProgressBars L426, M:FreeUnusedRightEdgeFrames L438, M:BeginLayout L450, M:OnEvent L474, M:OnBlockHeaderClick L493, M:OnBlockHeaderEnter L520, M:OnBlockHeaderLeave L536, M:OnFreeBlock L547, M:QCObjectives L570, M:QCQuest L652, M:LayoutContents L767
+- **Public** L833: T.QuestOffset L839, T.IsDirty L847, T.MarkDirty L852, T.Update L863, T.Rebuild L906, T.OnCombatEnded L921, WantNativeHidden L934, T.ApplyNativeVisibility L938, T.Create L971, container:IsCollapsed L975, container:ForceExpand L978, container:MarkDirty L983
 
 ## Tracker/TrackerZones.lua (262 lines)
 
@@ -108,7 +108,7 @@ the search box in the Quests bar. A magnifying glass sits right of the zone tool
 
 - **(top)** L1: F.SearchOpen L43, Duration L47, Solid L51, LeftOffset L58, FullWidth L62, FadeTitle L67, SetWidth L74, SetBandAlpha L82, ShowBand L88, PaintLine L105, LayoutLine L113, Paint L122, F.CloseSearch L141, F.OpenSearch L161, F.PlaceSearch L181, F.SetSearchCount L202, F.ShowNoMatch L209, F.SearchRegion L233, WatchClicks L245, HeaderLeave L255, CreateClear L261, CreateEdit L296, F.CreateSearch L348, find.available L354
 
-## UI/Options.lua (1175 lines)
+## UI/Options.lua (1182 lines)
 
 Settings: Clean Quest Tracker's own window (/cqt, the header cog, or Esc > Options > AddOns) and slash commands. The window is drawn by the add-on itself in WoW Forever's modern style, the same palette EllesmereUI Forever uses: warm charcoal panels, thin...
 

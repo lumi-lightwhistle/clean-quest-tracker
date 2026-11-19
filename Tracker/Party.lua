@@ -198,6 +198,13 @@ end
 
 -- Other members of your party (your raid subgroup in a raid) who have the quest, and how many others are in it.
 function P.Members(questID)
+	if P.fake then -- /cqt fakeparty
+		local fakes = {}
+		for index = 1, P.fake do
+			fakes[index] = { unit = "party" .. index, name = "Tester" .. index, class = "WARRIOR" }
+		end
+		return fakes, 4
+	end
 	if not (Q.db.party and IsInGroup()) then
 		return nil
 	end
@@ -222,6 +229,9 @@ end
 
 -- How many other members have the quest, without building member records. For the once-a-second watchdog.
 function P.Count(questID)
+	if P.fake then
+		return P.fake
+	end
 	if not (Q.db.party and IsInGroup()) then
 		return 0
 	end
@@ -331,6 +341,7 @@ end
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 local HEIGHT = 18
 local PAD_LEFT, PAD_RIGHT, ICON_GAP, SPLIT_ICON = 5, 6, 3, 20
+local BADGE_GAP = 3 -- clear space kept between badges on neighbouring rows
 local SHAPES = {
 	round = { file = MEDIA .. "BadgeRound", edge = MEDIA .. "BadgeRoundEdge", margin = 6 },
 	pill = { file = MEDIA .. "BadgePill", edge = MEDIA .. "BadgePillEdge", margin = 9 },
@@ -406,6 +417,13 @@ local function SlotWidth()
 		slotKey, slotWidth = key, widest
 	end
 	return slotWidth
+end
+
+-- The shortest a quest's row may be, with a badge on it, so badges on neighbouring rows keep BADGE_GAP between them. A
+-- row of one line (a finished quest, or any quest folded by focus mode) is shorter than the badge, so stacked badges
+-- would otherwise touch or overlap. The distance between two badges' tops is a row's height plus the gap below it.
+function P.MinRow()
+	return HEIGHT + BADGE_GAP - (Q.db.questGap or 0)
 end
 
 -- How wide the badge is, in the current (or given) style. It is the same for every count. The tracker reserves this
@@ -733,39 +751,7 @@ function P.CreatePreview(parent)
 	return preview
 end
 
--- Last count shown per quest, so a change (someone picks it up, or drops it) can be pointed out.
-local lastCount = {}
-
--- A quick swell and settle on the badge.
-local function Pop(badge)
-	local duration = Q.Motion.Duration()
-	if duration <= 0 then
-		return
-	end
-	local group = badge.qcPop
-	if not group then
-		group = badge:CreateAnimationGroup()
-		group.grow = group:CreateAnimation("Scale")
-		group.grow:SetScale(1.35, 1.35)
-		group.grow:SetOrigin("CENTER", 0, 0)
-		group.grow:SetSmoothing("OUT")
-		group.grow:SetOrder(1)
-		group.settle = group:CreateAnimation("Scale")
-		group.settle:SetScale(1 / 1.35, 1 / 1.35)
-		group.settle:SetOrigin("CENTER", 0, 0)
-		group.settle:SetSmoothing("IN_OUT")
-		group.settle:SetOrder(2)
-		badge.qcPop = group
-	end
-	group:Stop()
-	group.grow:SetDuration(duration * 0.6)
-	group.settle:SetDuration(duration * 1.2)
-	group:Play()
-end
-
 function P.Attach(block, members, size, offsetX)
-	local previous = lastCount[block.id]
-	lastCount[block.id] = members and #members or 0
 	if not members then
 		P.Detach(block)
 		return
@@ -778,9 +764,6 @@ function P.Attach(block, members, size, offsetX)
 	badge:ClearAllPoints()
 	badge:SetPoint("TOPRIGHT", block, "TOPRIGHT", offsetX, 2)
 	badge:Show()
-	if previous and previous ~= count then
-		Pop(badge)
-	end
 	if GameTooltip:IsOwned(badge) then
 		ShowTooltip(badge)
 	end

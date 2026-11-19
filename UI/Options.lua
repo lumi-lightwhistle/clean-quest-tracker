@@ -1159,6 +1159,13 @@ SlashCmdList.CLEANQUESTTRACKER = function(message)
 		Q.PreviewProgress()
 	elseif command == "party" then
 		Q.Party.Report()
+	elseif command:match("^fakeparty") then
+		-- Pretends that many party members (1 to 4) have every tracked quest, to see the badges without a group.
+		-- Not saved: /cqt fakeparty alone, or /reload, turns it off.
+		local count = tonumber(command:match("%d+"))
+		Q.Party.fake = count and count >= 1 and math.min(count, 4) or nil
+		Q.Tracker.MarkDirty()
+		Q.Print(Q.Party.fake and ("Pretending %d party member(s) have every quest."):format(Q.Party.fake) or "Fake party off.")
 	elseif command == "compact" or command == "comfortable" then
 		Q.ApplyPreset(command)
 		O.Refresh()
@@ -1168,7 +1175,7 @@ SlashCmdList.CLEANQUESTTRACKER = function(message)
 		Q.Tracker.Rebuild()
 		Q.Print("All settings reset.")
 	elseif command == "help" then
-		Q.Print("/cqt opens settings (/sqt and /qc work too). /cqt lock, unlock, compact, comfortable, reset, preview, party.")
+		Q.Print("/cqt opens settings (/sqt and /qc work too). /cqt lock, unlock, compact, comfortable, reset, preview, party, fakeparty 1-4.")
 	else
 		O.Toggle()
 	end

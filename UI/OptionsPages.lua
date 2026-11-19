@@ -210,7 +210,7 @@ O.PAGES = {
 					{ "bullet", "Zones fold and unfold, with the rows below gliding into place" },
 					{ "bullet", "The frame eases to its new height, and minimising rolls it up" },
 					{ "bullet", "Zone arrows turn, and header icons fade in on hover" },
-					{ "bullet", "New quests fade in, finished quests flare green, and the party count pops" },
+					{ "bullet", "New quests fade in, and finished quests flare green (or, when sorted to the top or bottom, fold and glide there)" },
 					{ "label", "Always" },
 					{ "text", "Nothing animates during combat; the list snaps to its new layout instead. Progress bars always ease to their new value, even on None." },
 				} },
