@@ -18,7 +18,7 @@ same ground for coding agents, plus the rules learned the hard way.
   - `luacheck.py <file.lua>`: a structural Lua syntax check. Run it on every file you touch.
   - `prereview.py`: mechanical pre-commit checks (syntax, `.toc`, unread settings, unhandled highlight keys, stale wording).
   - `commit_gate.py`: the Claude Code hook that runs `prereview.py` before a commit.
-  - `img.py`: a pure-Python TGA/PNG writer (no PIL). `badges.py`: draws the badge images. `card_icons.py`: draws the full-colour card icons in `docs/icons/` for the CurseForge page.
+  - `img.py`: a pure-Python TGA/PNG writer (no PIL). `badges.py`: draws the badge images. `card_icons.py`: draws the CurseForge page's icon tiles (`docs/icons/tile-*.png`: rim, fill and icon in one picture).
 - **Blizzard UI source for this client:** the `forever` branch of github.com/Gethe/wow-ui-source (raw files via curl).
 - **Style reference:** EllesmereUI's Forever theme (`AddOns\EllesmereUI\EllesmereUI.lua`, its `STYLE` table, accent #DCA77F).
 - **Look:** modern WoW Forever (warm charcoal, bronze, a little teal: the settings window's rim, and the lit line under the search box while typing). Defaults should match what players have today unless the change is meant to alter them.
