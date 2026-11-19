@@ -11,6 +11,7 @@ ignore:
   - .gitignore
   - README.md
   - CLAUDE.md
+  - AGENTS.md
 
 manual-changelog:
   filename: CHANGELOG.md

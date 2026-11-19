@@ -1,0 +1,49 @@
+# Quirks learned the hard way
+
+Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this is the detail.
+
+## Quest list and Blizzard's tracker
+- **Never touch Blizzard's tracker.** Replacing its methods or using ObjectiveTrackerManager's pools, template cache,
+  `g_questPOIButtonPool`, `CanShowPOIs` or EventRegistry triggers taints it ("tainted by ..." errors through Edit
+  Mode). We use our own pools and per-instance overrides and hide the native tracker with `RegisterStateDriver`.
+- **Quest focus icons follow the game's `questPOI` setting.** The Quests-page switch reads and writes that CVar, so a
+  player's existing choice is respected. `T.PoiShown()` is the one place that reads it, `T.PoiSize()` the one place
+  that reads the icon size. Icons on: quest indent is `poiIndent` (list's left edge to the icon). Off: `indent`
+  (from the zone name).
+- **Quest item buttons are secure.** No layout moves while they are on screen in combat; catch up on
+  `PLAYER_REGEN_ENABLED`.
+- **Redraws:** quest events alone are not enough. The watcher in `Tracker/TrackerWatch.lua` (including
+  `QUEST_WATCH_UPDATE`) plus a once-a-second signature check keep the list current. Don't "optimise" either away
+  without proving the list still updates.
+
+## Secrets and party data
+- **Secret values exist on this client.** Guard reads with `Q.Readable` or `issecretvalue`; wrap risky API calls in
+  `pcall`.
+- **Party detection only sees nearby members.** Order: legacy `IsUnitOnQuest(logIndex, unit)`, then
+  `C_QuestLog.IsUnitOnQuest`, then tooltip party data, then Questie's comms. Debug with `/cqt party`.
+
+## Loading and saved settings
+- **New files (Lua or `.tga`) need a full game restart.** Edits to existing files need only `/reload`.
+- **`Q.SCHEMA`** must be bumped whenever a saved value changes meaning, with a migration that keeps the player's
+  layout. A player who changes nothing must see the same tracker as before.
+- **The `.toc` is the load order.** CI fails if a Lua file is missing from it or it lists one that doesn't exist.
+
+## Textures and fonts
+- TGAs: 32-bit, stored bottom-up (descriptor 8), white with alpha so the game can tint them.
+- Round shapes use circle masks or nine-slice. Overlapping see-through pieces stack visibly, so use solid premixed
+  colours.
+- The game font (Friz) has no bold, and the OUTLINE flag adds a dark edge. Fake bold with a same-colour shadow
+  offset by 1px.
+- `tools/img.py` is a pure-Python TGA/PNG writer (no PIL); `tools/badges.py` and `tools/card_icons.py` use it.
+
+## Look
+Modern WoW Forever: warm charcoal, bronze (accent #DCA77F), a little teal (the settings window's rim, and the lit
+line under the search box while typing). Style reference: EllesmereUI's Forever theme (`STYLE` table in
+`AddOns\EllesmereUI\EllesmereUI.lua`).
+
+## Windows and shell
+- Heredocs mangle backslashes in Lua paths (`\\`): write Python edit scripts to a file first.
+- Windows refuses to rename or delete a folder this session (or the app) is using.
+- No `luac` is installed; `tools/luacheck.py` is a structural check only. It cannot catch runtime errors.
+- A folder named `undefined` can appear in the project root (a tool writing to an unset path). It is gitignored and
+  safe to ignore; don't read it.
