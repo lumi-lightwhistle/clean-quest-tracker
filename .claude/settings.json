@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(./Releases/**)",
+      "Read(./docs/screenshots/**)",
+      "Read(./undefined/**)",
+      "Read(./CleanQuestTracker/undefined/**)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

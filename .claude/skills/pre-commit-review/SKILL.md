@@ -9,6 +9,16 @@ Run this after the work is finished and tested as far as it can be, and before a
 
 The point of an independent review is fresh eyes. Do not review your own diff inline and call that the review.
 
+## 0. Size the review first
+
+Reviewers are the expensive part (each one reads whole files on a top-tier model), so match the review to the change:
+
+- **Small** (a bug fix, wording, a tweak inside one function, under about 100 changed lines, no saved-setting or preset changes): run step 1 only, plus one reviewer at `effort: "medium"` on the diff (`git diff HEAD`) and the functions around it, not whole files. Skip the re-review in step 4 unless the fix is more than a few lines.
+- **Normal** (a new setting or control, a layout change, touching several files): steps 1 to 5 as written, groups of about 400 changed lines, `effort: "high"`.
+- **Risky** (anything in `Core/Core.lua` migrations or `Q.SCHEMA`, presets, taint-sensitive tracker code, or a release): the full review at `effort: "high"`, or `"max"` for a release.
+
+Say which size you chose and why in the final report. If the user asks for a quick commit and the change is small, step 1 alone is enough.
+
 ## 1. Mechanical checks
 
 ```powershell
@@ -30,7 +40,7 @@ Always include one reviewer for the text pass: every comment, settings note and 
 
 ## 3. Launch independent reviewers
 
-Start one read-only reviewer per group, in parallel. Use a general-purpose agent with the strongest model available and `effort: "high"` (`"max"` for a release or a risky migration). Do not use a specialised review agent with a small tool budget. If you cannot start separate reviewers at all, say so and ask the user for a human review; do not substitute a review of your own diff. The prompt must say the reviewer may not edit files, must read every line of its files before reporting, and must list anything it did not get to. Give each the same checklist:
+Start one read-only reviewer per group, in parallel. Use a general-purpose agent with the strongest model available (Normal and Risky changes; a small change can use a cheaper model) at the effort set in step 0 (`"max"` for a release or a risky migration). Tell each reviewer to start from the diff and read only as much surrounding code as it needs, rather than every line of the file. Do not use a specialised review agent with a small tool budget. If you cannot start separate reviewers at all, say so and ask the user for a human review; do not substitute a review of your own diff. The prompt must say the reviewer may not edit files, must read every line of its files before reporting, and must list anything it did not get to. Give each the same checklist:
 
 1. **Gaps.** Edge cases, nil values, secret values (`Q.Readable`, `issecretvalue`), combat lockdown, anything AGENTS.md lists under "Rules learned the hard way", taint risks from touching Blizzard's tracker.
 2. **Regressions for existing players.** Defaults, saved settings and migrations. Does a player who changes nothing see exactly the same tracker as before? Is a new schema number added for every change to the meaning of a saved value, with a migration that keeps their layout?

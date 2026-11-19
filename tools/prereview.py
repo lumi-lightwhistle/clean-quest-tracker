@@ -132,6 +132,11 @@ def main():
         for problem in problems:
             print(f"    - {problem}")
         failed += len(problems)
+    # Keep docs/REPOMAP.md current (a note, not a failure: the file is generated).
+    stale_map = subprocess.run([sys.executable, "tools/repomap.py", "--check"], cwd=ROOT).returncode != 0
+    if stale_map:
+        subprocess.run([sys.executable, "tools/repomap.py"], cwd=ROOT)
+        print("    (docs/REPOMAP.md was out of date and has been rewritten: include it in the commit)")
     print(f"\n{failed} problem(s)")
     return 1 if failed else 0
 
