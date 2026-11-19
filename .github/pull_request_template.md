@@ -6,3 +6,5 @@
 
 - [ ] Tested in game
 - [ ] `python tools/luacheck.py` passes on touched files
+- [ ] `python tools/prereview.py` is clean, and the independent review (the `pre-commit-review` skill) was run
+- [ ] The title reads as a changelog line for players (see the `changelog` skill)

@@ -46,7 +46,7 @@ local PALETTE = {
 
 local panel, scroll, child, thumb, pageTitle, pageNote
 local navButtons, controls, pages = {}, {}, {}
-local current = 1 -- opens on Layout
+local current = 1 -- opens on the first page (General)
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Drawing helpers
@@ -59,14 +59,7 @@ end
 
 -- A colour that fades from one alpha to another across a texture. Falls back to the average on clients without
 -- colour gradients.
-local function Fade(texture, orientation, color, fromAlpha, toAlpha)
-	texture:SetColorTexture(1, 1, 1, 1)
-	local ok = CreateColor and pcall(texture.SetGradient, texture, orientation,
-		CreateColor(color[1], color[2], color[3], fromAlpha), CreateColor(color[1], color[2], color[3], toAlpha))
-	if not ok then
-		texture:SetColorTexture(color[1], color[2], color[3], (fromAlpha + toAlpha) / 2)
-	end
-end
+local Fade = Q.Fade
 
 -- A one-pixel outline inside a frame's edges; returns the four edges.
 local function Outline(frame, color, alpha, layer)
@@ -277,7 +270,20 @@ local function Toggle(page, spec)
 	knob:SetSize(14, 14)
 	Round(knob, switch)
 	PassHover(row, switch)
+	-- A switch normally flips a saved setting (spec.k). One that mirrors something the add-on doesn't own, such as a game
+	-- setting, passes spec.get and spec.set instead.
+	local function Current()
+		if spec.get then
+			return spec.get() and true or false
+		end
+		return Q.db[spec.k] and true or false
+	end
 	local function Flip()
+		if spec.set then
+			spec.set(not Current())
+			Changed(nil, spec.rebuild) -- no saved key is involved
+			return
+		end
 		local value = not Q.db[spec.k]
 		if spec.k == "locked" then
 			Q.SetLocked(value)
@@ -292,7 +298,7 @@ local function Toggle(page, spec)
 	switch:SetScript("OnClick", Flip)
 	row:SetScript("OnClick", Flip)
 	function row:Refresh()
-		local on = Q.db[spec.k] and true or false
+		local on = Current()
 		local color = on and TRACK_ON or TRACK_OFF
 		for _, part in ipairs(parts) do
 			part:SetColorTexture(color[1], color[2], color[3], 1)
@@ -361,18 +367,32 @@ local function Slider(page, spec)
 	value:SetPoint("CENTER")
 	value:SetJustifyH("CENTER")
 
+	-- Which saved setting the slider edits can depend on another setting too (spec.kFn): the indent is kept separately
+	-- for quests with and without icons.
+	local function Key()
+		return spec.kFn and spec.kFn() or spec.k
+	end
+
+	-- The saved value, held inside the slider's range (a setting edited by hand in the saved file can lie outside it).
+	local function Shown()
+		return math.max(spec.min, math.min(spec.max, Q.db[Key()] or spec.min))
+	end
+
 	local function Set(raw)
 		local snapped = math.floor(math.max(spec.min, math.min(spec.max, raw)) / step + 0.5) * step
 		snapped = tonumber(("%.2f"):format(snapped))
-		if math.abs((Q.db[spec.k] or 0) - snapped) < step / 4 then
+		-- Against the saved value, not the one shown: a value outside the range (edited by hand in the saved file) still
+		-- has to be replaceable by the end of the range.
+		local saved = Q.db[Key()]
+		if type(saved) == "number" and math.abs(saved - snapped) < step / 4 then
 			return
 		end
-		Q.db[spec.k] = snapped
-		Changed(spec.k)
+		Q.db[Key()] = snapped
+		Changed(Key(), spec.rebuild)
 	end
 
 	local more = StepButton(row, 1, function()
-		Set((Q.db[spec.k] or spec.min) + step)
+		Set(Shown() + step)
 	end)
 	more:SetPoint("RIGHT", box, "LEFT", -8, 0)
 
@@ -403,7 +423,7 @@ local function Slider(page, spec)
 	PassHover(row, slider)
 
 	local less = StepButton(row, -1, function()
-		Set((Q.db[spec.k] or spec.min) - step)
+		Set(Shown() - step)
 	end)
 	less:SetPoint("RIGHT", slider, "LEFT", -8, 0)
 
@@ -413,21 +433,13 @@ local function Slider(page, spec)
 			Set(raw)
 		end
 	end)
-	local widgets = { slider, more, less }
 	function row:Refresh()
-		local current = Q.db[spec.k] or spec.min
+		local shown = Shown()
 		loading = true
-		slider:SetValue(current)
+		slider:SetValue(shown)
 		loading = false
-		value:SetText(format(current))
-		filled:SetWidth(math.max(1, trackWidth * (current - spec.min) / (spec.max - spec.min)))
-		-- A slider tied to a switch (Background darkness) is greyed out and ignores the mouse while the switch is off.
-		local enabled = not spec.enabledBy or Q.db[spec.enabledBy]
-		for _, widget in ipairs(widgets) do
-			widget:SetAlpha(enabled and 1 or 0.35)
-			widget:EnableMouse(enabled and true or false)
-		end
-		box:SetAlpha(enabled and 1 or 0.35)
+		value:SetText(format(shown))
+		filled:SetWidth(math.max(1, trackWidth * (shown - spec.min) / (spec.max - spec.min)))
 	end
 	controls[#controls + 1] = row
 end
@@ -667,6 +679,13 @@ local function BadgeStyles(page)
 	end
 	page.y = page.y - holder:GetHeight()
 	local row = { hover = holder }
+	-- Hovering the picker while it is greyed out (no party badge) still shades where the badges would go.
+	function row.Enter()
+		Q.Tracker.SetHighlight("party")
+	end
+	function row.Leave()
+		Q.Tracker.SetHighlight(nil)
+	end
 	function row:Refresh()
 		for _, card in ipairs(cards) do
 			local selected = (Q.db.badgeStyle or "pill") == card.key
@@ -752,6 +771,56 @@ local function Inset(page, spec)
 	page.y = page.y + y - 6
 end
 
+-- A setting that only matters while another is set (spec.enabledBy = a saved switch that must be on, spec.disabledBy =
+-- one that must be off, spec.enabledWhen = a function) is dimmed, ignores the mouse, and names what it needs in a
+-- tooltip (spec.needs). Hovering it still shades the part of the tracker it would change.
+local function SpecEnabled(spec)
+	if spec.enabledBy and not Q.db[spec.enabledBy] then
+		return false
+	end
+	if spec.disabledBy and Q.db[spec.disabledBy] then
+		return false
+	end
+	if spec.enabledWhen and not spec.enabledWhen() then
+		return false
+	end
+	return true
+end
+
+local function Gate(row, spec)
+	local frame = row.hover or row
+	local blocker = CreateFrame("Frame", nil, frame)
+	blocker:SetAllPoints()
+	blocker:SetFrameLevel(frame:GetFrameLevel() + 30)
+	blocker:EnableMouse(true)
+	blocker:Hide()
+	blocker:SetScript("OnEnter", function(self)
+		if row.Enter then
+			row.Enter()
+		end
+		if spec.needs then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(spec.needs)
+			GameTooltip:Show()
+		end
+	end)
+	blocker:SetScript("OnLeave", function()
+		GameTooltip:Hide()
+		if row.Leave then
+			row.Leave()
+		end
+	end)
+	local refresh = row.Refresh
+	function row:Refresh()
+		if refresh then
+			refresh(self)
+		end
+		local enabled = SpecEnabled(spec)
+		frame:SetAlpha(enabled and 1 or 0.4)
+		blocker:SetShown(not enabled)
+	end
+end
+
 local BUILD = {
 	toggle = Toggle,
 	slider = Slider,
@@ -819,7 +888,12 @@ local function BuildPage(index, info)
 	for _, group in ipairs(info.groups) do
 		GroupLabel(page, group[1], group[2])
 		for _, spec in ipairs(group[3]) do
+			local before = #controls
 			BUILD[spec[1]](page, spec)
+			-- Only a control that added itself to the list can be greyed out (buttons and notes don't).
+			if #controls > before and (spec.enabledBy or spec.disabledBy or spec.enabledWhen) then
+				Gate(controls[#controls], spec)
+			end
 		end
 	end
 	page.height = -page.y + 12
@@ -863,8 +937,9 @@ local function Create()
 	brandRule:SetPoint("TOPRIGHT", 0, -TOP_HEIGHT)
 	brandRule:SetHeight(1)
 	local name = Text(side, "GameFontNormal", 15, 1, C.accent)
-	name:SetPoint("TOPLEFT", 18, -14)
 	name:SetText("Clean Quest Tracker")
+	-- Equal room either side of the name, between the window edge and the column's divider (the version sits under it).
+	name:SetPoint("TOPLEFT", math.max(10, math.floor((SIDE_WIDTH - 1 - name:GetStringWidth()) / 2)), -14)
 	local version = Text(side, "GameFontHighlightSmall", 11, LABEL)
 	version:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -3)
 	version:SetText(Q.version)

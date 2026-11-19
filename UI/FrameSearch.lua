@@ -10,7 +10,7 @@ local F = Q.Frame
 
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 local ICON_SIZE = 18
-local BOX_HEIGHT = 20
+local EDIT_HEIGHT = 20 -- the text field inside the box (the box itself is as tall as the bar)
 local BOX_RIGHT = 68 -- the box stops short of the cog and padlock
 local CLOSED_WIDTH = ICON_SIZE + 4
 local WIDTH_TWEEN = "qc-search-width"
@@ -23,8 +23,18 @@ local INK = { 0.95, 0.93, 0.88 }
 local BAND_TWEEN = "qc-search-band"
 local RED = { 0.93, 0.32, 0.29 }
 
+-- The lit line along the bottom of the box. It covers the bar's own rule (and the pixel above it), so the bar keeps a
+-- single line.
+-- It is brightest across the middle of the box and fades to nothing at both ends, where the plain rule shows through.
+-- Each stop is { share of the box's width, opacity }; textures can only blend between two colours, so one piece is
+-- drawn between each pair of stops.
+local LINE_HEIGHT = 2
+local LINE_STOPS = { { 0, 0 }, { 0.14, 0.38 }, { 0.32, 0.9 }, { 0.68, 0.9 }, { 0.86, 0.38 }, { 1, 0 } }
+local WELL_REST_ALPHA = 0.42 -- how much of the well stays while a filter is kept and the box isn't being typed in
+
 local header, box, edit, icon, placeholder, count, clear, noMatch
-local band = {} -- fill, underline and rim behind the whole bar
+local band = {} -- fill and rule behind the whole bar
+local lineState -- "typing" or "resting": which colour the lit line is painted in
 local open = false
 
 function F.SearchOpen()
@@ -63,8 +73,8 @@ local function SetWidth(width, done)
 	end, done)
 end
 
--- The dark band behind the whole Quests bar while a search is open: it carries the bar's bronze underline and teal
--- rim, so the box reads as part of the bar and not a separate widget.
+-- The dark band behind the whole Quests bar while a search is open: it carries the bar's bronze rule, so the box reads
+-- as part of the bar and not a separate widget.
 local function SetBandAlpha(alpha)
 	for _, texture in ipairs(band) do
 		texture:SetAlpha(alpha)
@@ -87,14 +97,36 @@ local function ShowBand(show)
 	end)
 end
 
--- Typing: a slightly darker field on the band with a bronze underline and the teal rim. Resting (filter kept, not
--- typing): the field drops away and the text turns bronze; the band stays.
+-- Paints the lit line in one colour: teal while typing, bronze while a filter is kept.
+local function PaintLine(color)
+	for index, piece in ipairs(box.line) do
+		Q.Fade(piece, "HORIZONTAL", color, LINE_STOPS[index][2], LINE_STOPS[index + 1][2])
+	end
+end
+
+-- Sizes the pieces of the lit line to the box as it grows and shrinks. They are chained edge to edge (see CreateSearch),
+-- so rounding can never leave a seam or an overlap between them.
+local function LayoutLine(width)
+	for index, piece in ipairs(box.line) do
+		piece:SetWidth(math.max(0.01, (LINE_STOPS[index + 1][1] - LINE_STOPS[index][1]) * width))
+	end
+end
+
+-- The box is a well sitting on the bar's rule, with no underline of its own. Typing: the well is at full depth and the
+-- lit line is teal. Resting (filter kept, not typing): the well is faded, the line turns bronze and the text
+-- turns bronze; the band stays.
 local function Paint()
 	local focused = edit:HasFocus()
 	local text = edit:GetText() or ""
-	box.fill:SetShown(focused)
-	box.line:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], focused and 0.62 or 0.3)
-	box.rim:SetShown(focused)
+	box.fill:SetAlpha(focused and 1 or WELL_REST_ALPHA)
+	for _, edge in ipairs(box.edges) do
+		edge:SetAlpha(focused and 1 or WELL_REST_ALPHA)
+	end
+	local state = focused and "typing" or "resting"
+	if lineState ~= state then
+		lineState = state
+		PaintLine(focused and TEAL or ACCENT)
+	end
 	local color = focused and INK or ACCENT
 	edit:SetTextColor(color[1], color[2], color[3])
 	placeholder:SetShown(focused and text == "")
@@ -149,8 +181,10 @@ function F.PlaceSearch()
 	local find = header.find
 	find:ClearAllPoints()
 	find:SetPoint("LEFT", LeftOffset(), 0)
+	-- The box is as tall as the bar, so its bottom edge is the bar's own rule.
 	box:ClearAllPoints()
-	box:SetPoint("LEFT", header, "LEFT", LeftOffset() - 2, 0)
+	box:SetPoint("TOPLEFT", header, "TOPLEFT", LeftOffset() - 2, 0)
+	box:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", LeftOffset() - 2, 0)
 	if open and not Q.Motion.Target(WIDTH_TWEEN) then
 		box:SetWidth(FullWidth())
 	end
@@ -255,7 +289,7 @@ local function CreateEdit()
 	edit = CreateFrame("EditBox", nil, box)
 	edit:SetPoint("LEFT", 20, 0)
 	edit:SetPoint("RIGHT", -58, 0)
-	edit:SetHeight(BOX_HEIGHT)
+	edit:SetHeight(EDIT_HEIGHT)
 	edit:SetAutoFocus(false)
 	edit:SetMaxLetters(40)
 	edit:SetFontObject(GameFontHighlight)
@@ -316,18 +350,42 @@ function F.CreateSearch(parent)
 	header.find = find
 
 	box = CreateFrame("Frame", nil, header)
-	box:SetHeight(BOX_HEIGHT)
-	box:SetWidth(CLOSED_WIDTH)
+	box:SetWidth(CLOSED_WIDTH) -- its height comes from PlaceSearch: as tall as the bar
 	box:SetFrameLevel(header:GetFrameLevel() + 5)
 	box:SetClipsChildren(true)
 	box:EnableMouse(true)
 	box:Hide()
-	box.fill = Solid(box, "BACKGROUND", { 0, 0, 0 }, 0.3)
-	box.fill:SetAllPoints()
-	box.line = Solid(box, "BORDER", ACCENT, 0.62)
-	box.line:SetPoint("BOTTOMLEFT")
-	box.line:SetPoint("BOTTOMRIGHT")
-	box.line:SetHeight(1)
+	-- The well: darker toward the top, ending just above the bar's rule, with a faint edge down each side.
+	box.fill = box:CreateTexture(nil, "BACKGROUND")
+	box.fill:SetPoint("TOPLEFT")
+	box.fill:SetPoint("BOTTOMRIGHT", 0, LINE_HEIGHT)
+	Q.Fade(box.fill, "VERTICAL", { 0, 0, 0 }, 0.3, 0.58)
+	box.edges = {}
+	for _, side in ipairs({ "LEFT", "RIGHT" }) do
+		local edge = Solid(box, "BACKGROUND", ACCENT, 0.16)
+		edge:SetDrawLayer("BACKGROUND", 1) -- above the well
+		edge:SetPoint("TOP" .. side)
+		edge:SetPoint("BOTTOM" .. side, 0, LINE_HEIGHT)
+		edge:SetWidth(1)
+		box.edges[#box.edges + 1] = edge
+	end
+	-- The lit line on the bar's rule (see LINE_STOPS): one piece after another from the left, painted by Paint (bronze
+	-- until the box is typed in).
+	box.line = {}
+	for index = 1, #LINE_STOPS - 1 do
+		local piece = box:CreateTexture(nil, "ARTWORK")
+		piece:SetHeight(LINE_HEIGHT)
+		if index == 1 then
+			piece:SetPoint("BOTTOMLEFT")
+		else
+			piece:SetPoint("BOTTOMLEFT", box.line[index - 1], "BOTTOMRIGHT")
+		end
+		box.line[index] = piece
+	end
+	box:SetScript("OnSizeChanged", function(_, width)
+		LayoutLine(width)
+	end)
+	LayoutLine(CLOSED_WIDTH)
 	-- The band behind the whole bar, drawn on the header itself so every icon and the box sit above it. It matches the
 	-- bar's own artwork in width.
 	local overhang = Q.HasAtlas("UI-QuestTracker-Secondary-Objective-Header") and 10 or 0
@@ -340,31 +398,10 @@ function F.CreateSearch(parent)
 	rule:SetPoint("BOTTOMRIGHT", overhang, 0)
 	rule:SetHeight(1)
 	rule:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.6)
-	-- Teal rim light along the bottom edge, strongest toward the right, as on the Forever window art.
-	local bandRim = header:CreateTexture(nil, "BACKGROUND", nil, 5)
-	bandRim:SetPoint("BOTTOMRIGHT", overhang, 0)
-	bandRim:SetPoint("BOTTOMLEFT", header, "BOTTOM", -60, 0)
-	bandRim:SetHeight(1)
-	bandRim:SetColorTexture(1, 1, 1, 1)
-	if not (CreateColor and pcall(bandRim.SetGradient, bandRim, "HORIZONTAL",
-		CreateColor(TEAL[1], TEAL[2], TEAL[3], 0), CreateColor(TEAL[1], TEAL[2], TEAL[3], 0.8))) then
-		bandRim:SetColorTexture(TEAL[1], TEAL[2], TEAL[3], 0.4)
-	end
-	band[1], band[2], band[3] = fill, rule, bandRim
+	band[1], band[2] = fill, rule
 	for _, texture in ipairs(band) do
 		texture:SetAlpha(0)
 		texture:Hide()
-	end
-	-- The field's own teal rim while typing.
-	box.rim = box:CreateTexture(nil, "ARTWORK")
-	box.rim:SetPoint("BOTTOMLEFT", 1, 0)
-	box.rim:SetPoint("BOTTOMRIGHT", -1, 0)
-	box.rim:SetHeight(1)
-	box.rim:SetColorTexture(1, 1, 1, 1)
-	local ok = CreateColor and pcall(box.rim.SetGradient, box.rim, "HORIZONTAL",
-		CreateColor(TEAL[1], TEAL[2], TEAL[3], 0.1), CreateColor(TEAL[1], TEAL[2], TEAL[3], 0.85))
-	if not ok then
-		box.rim:SetColorTexture(TEAL[1], TEAL[2], TEAL[3], 0.5)
 	end
 	icon = box:CreateTexture(nil, "ARTWORK")
 	icon:SetTexture(MEDIA .. "Search")

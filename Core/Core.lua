@@ -10,7 +10,7 @@ CleanQuestTracker = Q
 
 Q.name = ADDON
 Q.version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "dev"
-Q.SCHEMA = 4
+Q.SCHEMA = 6
 
 Q.defaults = {
 	enabled = true,
@@ -21,6 +21,7 @@ Q.defaults = {
 	levels = true,
 	difficulty = true,
 	foldComplete = true,
+	completeOrder = "none", -- where finished quests sit within their zone: "none" (tracked order), "top" or "bottom"
 	hideBlizzard = true,
 	-- party
 	party = true,
@@ -32,9 +33,11 @@ Q.defaults = {
 	fontSize = 13,
 	zoneSize = 15,
 	indent = 8, -- from the zone name to the quest title; 0 lines them up
+	poiIndent = 0, -- the same, while quest focus icons are on: from the list's left edge to the icon
 	spacing = 3, -- between a quest title and its objective lines
 	questGap = 4, -- between one quest and the next
 	zoneGap = 10, -- above each zone heading
+	poiSize = 24, -- width of the round quest icon left of each title (shown only with the game's quest map icons on)
 	-- bars
 	bars = true,
 	barHeight = 3,
@@ -69,15 +72,15 @@ Q.defaults = {
 	y = -220,
 }
 
--- Layout presets. Each sets every spacing and text-size value together; changing one of them by hand makes the
+-- Layout presets. Each sets every spacing, text-size and quest icon size value together; changing one of them by hand makes the
 -- preset "custom". Width, height, scale and background are never part of a preset, so picking one doesn't move or
 -- resize the frame.
 Q.PRESETS = {
-	comfortable = { fontSize = 13, zoneSize = 15, spacing = 3, questGap = 4, zoneGap = 10, indent = 8, barGap = 4 },
-	compact = { fontSize = 12, zoneSize = 14, spacing = 1, questGap = 2, zoneGap = 6, indent = 2, barGap = 2 },
+	comfortable = { fontSize = 13, zoneSize = 15, spacing = 3, questGap = 4, zoneGap = 10, indent = 8, poiIndent = 0, barGap = 4, poiSize = 24 },
+	compact = { fontSize = 12, zoneSize = 14, spacing = 1, questGap = 2, zoneGap = 6, indent = 2, poiIndent = 0, barGap = 2, poiSize = 20 },
 }
 -- The values a preset decides, in a fixed order.
-Q.PRESET_KEYS = { "fontSize", "zoneSize", "spacing", "questGap", "zoneGap", "indent", "barGap" }
+Q.PRESET_KEYS = { "fontSize", "zoneSize", "spacing", "questGap", "zoneGap", "indent", "poiIndent", "barGap", "poiSize" }
 
 local db
 
@@ -105,6 +108,17 @@ function Q.Readable(value)
 		return false
 	end
 	return value ~= nil
+end
+
+-- Paints a texture with a gradient in one colour, from one opacity to another. Falls back to the average opacity if
+-- the client refuses the gradient call.
+function Q.Fade(texture, orientation, color, fromAlpha, toAlpha)
+	texture:SetColorTexture(1, 1, 1, 1)
+	local ok = CreateColor and pcall(texture.SetGradient, texture, orientation,
+		CreateColor(color[1], color[2], color[3], fromAlpha), CreateColor(color[1], color[2], color[3], toAlpha))
+	if not ok then
+		texture:SetColorTexture(color[1], color[2], color[3], (fromAlpha + toAlpha) / 2)
+	end
 end
 
 -- True when the client has a texture atlas by this name (atlases differ between game versions).
@@ -351,6 +365,25 @@ local function Migrate(saved)
 			local preset = saved.preset and Q.PRESETS[saved.preset]
 			if preset then
 				saved.barGap = preset.barGap
+			end
+		end
+		if schema < 5 then
+			-- The quest icon's size joined the presets (Comfortable 24; Compact 20, so the icons no longer
+			-- overlap). Only someone still on Compact is moved here; everyone else gets the default from the defaults above.
+			if saved.preset == "compact" and saved.poiSize == nil then
+				saved.poiSize = Q.PRESETS.compact.poiSize
+			end
+		end
+		if schema < 6 then
+			-- With quest focus icons on, the indent became its own setting, measured from the list's left edge to the
+			-- icon. Titles used to sit at the larger of the zone indent and 32 (a 28px icon plus 4); now they sit at the
+			-- icon's room plus this value. A long indent converts so its titles stay where they were; a shorter one
+			-- converts to 0, and those titles move left with the smaller icon.
+			if saved.poiIndent == nil and type(saved.indent) == "number" then
+				local T = Q.Tracker
+				local room = T.PoiRoom(tonumber(saved.poiSize) or Q.defaults.poiSize)
+				local start = saved.grouping == false and T.UNGROUPED_OFFSET_X or T.ZONE_OFFSET_X
+				saved.poiIndent = math.max(0, start + saved.indent - room)
 			end
 		end
 	end

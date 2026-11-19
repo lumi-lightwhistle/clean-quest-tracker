@@ -157,8 +157,11 @@ def free_names(toks):
 
 if __name__ == '__main__':
     report_free = '--free' in sys.argv
+    failed = False
     for p in [a for a in sys.argv[1:] if not a.startswith('--')]:
         toks, errs = check(p)
         print(p, 'OK' if not errs else '\n'.join(errs))
+        failed = failed or bool(errs)
         if report_free:
             print('  free:', ' '.join(sorted(free_names(toks))))
+    sys.exit(1 if failed else 0)

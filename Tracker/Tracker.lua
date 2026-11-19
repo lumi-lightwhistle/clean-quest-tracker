@@ -22,14 +22,48 @@ Q.Tracker = T
 -- ITEM_GAP clears the item's border art, which draws a few pixels outside the button.
 local ITEM_SIZE, ITEM_GAP = 26, 7
 local SPOKEN_SIZE, SPOKEN_GAP = 14, 4
-local QUEST_OFFSET_X = 30 -- room for the POI button left of each quest title
 local ZONE_OFFSET_X = 18 -- room for the zone chevron
+local UNGROUPED_OFFSET_X = 6 -- where quest titles start (before the indent) when quests aren't grouped by zone
 -- Shared with the files beside this one.
-T.ITEM_SIZE, T.SPOKEN_SIZE, T.ZONE_OFFSET_X = ITEM_SIZE, SPOKEN_SIZE, ZONE_OFFSET_X
+T.ITEM_SIZE, T.SPOKEN_SIZE, T.ZONE_OFFSET_X, T.UNGROUPED_OFFSET_X = ITEM_SIZE, SPOKEN_SIZE, ZONE_OFFSET_X, UNGROUPED_OFFSET_X
 local ZONE_TEMPLATE = "ObjectiveTrackerBlockTemplate"
 T.ZONE_TEMPLATE = ZONE_TEMPLATE
 local OTHER_ZONE = OTHER and (OTHER .. " " .. (QUESTS_LABEL or "Quests")) or "Other Quests"
-local POI_ROOM = 32 -- a quest map icon needs this much room left of the title
+-- Quest focus icons. The icon is poiSize wide and its right edge sits POI_GAP left of the title. With an indent of 0 it
+-- starts POI_OVERHANG left of the list's edge, about where it was before the size became a setting. "Room" is how far
+-- in the title starts at that point. TrackerPools.lua anchors the icon with POI_GAP.
+local POI_GAP = 7
+local POI_OVERHANG = 3
+T.POI_GAP = POI_GAP
+
+-- Whether the game's quest map icons are on (its questPOI setting); the icons beside each title, and the room kept for
+-- them, follow it. Shared with the files beside this one.
+function T.PoiShown()
+	return GetCVarBool("questPOI") and true or false
+end
+
+-- The icon's width in pixels: the setting, whole and never tiny. The one place that reads it.
+function T.PoiSize()
+	local size = tonumber(Q.db and Q.db.poiSize) or Q.defaults.poiSize
+	return math.floor(math.max(8, size) + 0.5)
+end
+
+-- `size` is only passed by the settings migration, which has a saved size that is not the current one yet.
+function T.PoiRoom(size)
+	return (size or T.PoiSize()) + POI_GAP - POI_OVERHANG
+end
+
+-- Two neighbouring icons may overlap by this many pixels before a row is stretched: the ring's art has a margin of
+-- empty pixels, so a small overlap of the frames is not seen. It is wide enough that the preset sizes (Comfortable 24,
+-- Compact 20) keep their row heights exactly; a custom icon size, quest gap or text size that brings two icons closer
+-- than this stretches the rows.
+local POI_OVERLAP = 8
+
+-- The shortest a quest's row may be so icons do not run into each other: the distance between two icons' centres is a
+-- row's height plus the gap below it.
+function T.PoiMinRow()
+	return T.PoiSize() - POI_OVERLAP - (Q.db.questGap or 0)
+end
 
 local module, container -- also T.module and T.container once created
 local dirty = false
@@ -138,7 +172,14 @@ local function Collect()
 				else
 					zone = db.zoneOf[questID] or OTHER_ZONE
 				end
-				list[#list + 1] = { id = questID, logIndex = logIndex, info = info, zone = zone, order = watchIndex }
+				list[#list + 1] = {
+					id = questID,
+					logIndex = logIndex,
+					info = info,
+					zone = zone,
+					order = watchIndex,
+					complete = C_QuestLog.IsComplete(questID) and true or false,
+				}
 			end
 		end
 	end
@@ -150,9 +191,25 @@ local function Collect()
 	return list
 end
 
+-- Within a zone (or the whole list without zones), finished quests can sit above or below the rest. Each part keeps the order the quests were tracked in.
+local function SortFinished(quests)
+	local where = Q.db.completeOrder
+	if where ~= "top" and where ~= "bottom" then
+		return
+	end
+	local top = where == "top"
+	table.sort(quests, function(a, b)
+		if a.complete ~= b.complete then
+			return a.complete == top
+		end
+		return a.order < b.order
+	end)
+end
+
 local function Group(list)
 	local db = Q.db
 	if not db.grouping then
+		SortFinished(list)
 		return { { quests = list } }
 	end
 	local byZone, groups = {}, {}
@@ -164,6 +221,9 @@ local function Group(list)
 			groups[#groups + 1] = group
 		end
 		group.quests[#group.quests + 1] = quest
+	end
+	for _, group in ipairs(groups) do
+		SortFinished(group.quests)
 	end
 	local here = GetRealZoneText and GetRealZoneText()
 	table.sort(groups, function(a, b)
@@ -575,7 +635,7 @@ end
 function M:QCQuest(quest, grouped)
 	local db = Q.db
 	local questID, logIndex, info = quest.id, quest.logIndex, quest.info
-	local isComplete = C_QuestLog.IsComplete(questID) and true or false
+	local isComplete = quest.complete
 	local isSuperTracked = C_SuperTrack.GetSuperTrackedQuestID() == questID
 	local showWaypoint = isSuperTracked
 		or (QuestMapFrame_GetFocusedQuestID and QuestMapFrame_GetFocusedQuestID() == questID)
@@ -653,8 +713,10 @@ function M:QCQuest(quest, grouped)
 	if hasItem then
 		block.height = math.max(block.height, ITEM_SIZE)
 	end
-	-- The module skips Blizzard's shared POI check (showWorldQuests), so the quest-POI setting is honoured here.
-	if GetCVarBool("questPOI") then
+	-- The module skips Blizzard's shared POI check (showWorldQuests), so the quest-POI setting is honoured here. A short
+	-- row (a finished quest folded to its title) is stretched to hold its icon, so icons never overlap.
+	if T.PoiShown() then
+		block.height = math.max(block.height, T.PoiMinRow())
 		block:SetPOIInfo(questID, isComplete, isSuperTracked)
 	else
 		block:SetPOIInfo()
@@ -729,14 +791,14 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- Public
 ------------------------------------------------------------------------------------------------------------------------
--- Where quest titles start. Indent counts from the zone name, so 0 lines titles up under it; without zones it counts
--- from a small margin. With quest map icons turned on, titles always leave room for the icon.
+-- Where quest titles start. With quest focus icons off, the indent (indent) counts from the zone name, so 0 lines titles
+-- up under it; without zones it counts from a small margin. With icons on, the icon comes first and the title follows
+-- it: the indent (poiIndent, kept separately) is the space from the list's left edge to the icon.
 function T.QuestOffset(grouped)
-	local offset = (grouped and ZONE_OFFSET_X or 6) + Q.db.indent
-	if GetCVarBool("questPOI") then
-		offset = math.max(offset, POI_ROOM)
+	if T.PoiShown() then
+		return T.PoiRoom() + (tonumber(Q.db.poiIndent) or 0)
 	end
-	return offset
+	return (grouped and ZONE_OFFSET_X or UNGROUPED_OFFSET_X) + Q.db.indent
 end
 
 -- A redraw is already queued.
@@ -893,7 +955,7 @@ function T.Create(parent)
 	}
 	module.headerHeight = 0
 	module.fromHeaderOffsetY = -6
-	module.blockOffsetX = QUEST_OFFSET_X
+	module.blockOffsetX = ZONE_OFFSET_X -- only a fallback: every block sets its own offset
 	-- Makes Blizzard's POI block show its button without asking ObjectiveTrackerManager:CanShowPOIs, which would
 	-- write this module into the manager's shared state.
 	module.showWorldQuests = true
