@@ -31,6 +31,7 @@ Only `feat`, `fix` and `perf` make a release.
 5. **Name settings the way the settings window does** (page, then setting), so players can find them.
 6. **Leave out** internal refactors, tool changes, file moves and test notes. They belong in the hidden sections.
 7. No marketing words, no version history, no apologies. Short sentences, active voice.
+8. **Start every line with a capital letter**, after the prefix: `feat: Search box sits on the Quests bar`, not `feat: search box…`. That goes for the pull request title, every override line, changelog bullets and Discord notes. release-please copies the text after the prefix as it is, so a lowercase start shows up lowercase in `CHANGELOG.md`.
 
 ## Steps
 
