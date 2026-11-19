@@ -6,13 +6,15 @@ Quest Tracker, and before that Quest Companion. Humans should start with `.githu
 same ground for coding agents, plus the rules learned the hard way.
 
 ## Do this on every change
-1. **Before any commit, run the `pre-commit-review` skill** (`.claude/skills/pre-commit-review/SKILL.md`): `python tools/prereview.py`, then independent reviewer agents over the changed files. Fix what they find or say why not. Committing and pushing still happen only when the user asks.
+1. **Before any commit, run the `pre-commit-review` skill** (`.claude/skills/pre-commit-review/SKILL.md`): `python tools/prereview.py`, then independent reviewer agents over the changed files, sized to the change (the skill's step 0: small fixes need only the script plus one light reviewer; the full review is for new settings, migrations, presets and releases). Fix what they find or say why not. Committing and pushing still happen only when the user asks.
    - In Claude Code a hook (`tools/commit_gate.py`, configured in `.claude/settings.json`) also blocks `git commit` (from the Bash and PowerShell tools) while `tools/prereview.py` is failing. It needs `python` on the path.
    - Other agents have no hook: run `python tools/prereview.py` yourself and follow the skill's steps by hand. The reviewer step needs the ability to start separate reviewer agents; if you cannot, say so and ask for a human review.
 2. **When you prepare a pull request or release notes, use the `changelog` skill** (`.claude/skills/changelog/SKILL.md`). The pull request title becomes the changelog line (Conventional Commits, written for players). A short overview per section, detail only where players need it. `CHANGELOG.md` is written by release-please; don't hand-edit it.
 3. **Fill in the pull request checklist** (`.github/pull_request_template.md`), including how you tested in game. Nothing here can run the game, so say what was and wasn't tested.
 
 ## Where things are
+- **Start with `docs/REPOMAP.md`:** every Lua file with its purpose, sections and functions, each with the line it starts on. Read it once, then open only the lines you need (a slice with offset and limit, or grep for the function) rather than whole files; `Options.lua`, `Tracker.lua`, `Party.lua` and `Frame.lua` are each 25 to 40 KB. It is generated (`python tools/repomap.py`, and `tools/prereview.py` refreshes it), so don't hand-edit it. It relies on the file-header comment and the `-----` section banners, so keep that style in new files.
+- Don't read screenshots in `docs/screenshots/` or the zips in `Releases/` (they are blocked in `.claude/settings.json`).
 - The repository root is the add-on (`CleanQuestTracker.toc`; Lua in `Core/`, `Tracker/`, `UI/`; textures in `Media/`). New Lua files go in the `.toc` with their folder (`Tracker\X.lua`). Repo config lives in `.github/` (CONTRIBUTING, SECURITY, pkgmeta.yml, release-please files). Releases are automatic (release-please, then the Package workflow uploads to GitHub and CurseForge); see CONTRIBUTING.md.
 - `tools/`: the only checks available (no `luac` is installed).
   - `luacheck.py <file.lua>`: a structural Lua syntax check. Run it on every file you touch.
