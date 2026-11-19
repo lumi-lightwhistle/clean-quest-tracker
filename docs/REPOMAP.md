@@ -20,13 +20,13 @@ Thin rounded progress bars under counted objectives, with an eased fill animatio
 
 - **(top)** L1: Q.CompleteColor L9, Pieces L13, Paint L23, Draw L49, Animate L60, Q.NewProgressBar L73, Q.SetBarInset L91, Q.SetBarProgress L98, Q.PreviewProgress L115
 
-## Tracker/Party.lua (804 lines)
+## Tracker/Party.lua (826 lines)
 
 Party badge: how many other members of your party have each quest, who they are, and one-click sharing.
 
-- **(top)** L1: Readable L13, ClassColor L17, Member L27, QuestieComms L50, ShortName L68, QuestieNames L73, QuestieObjectives L96, Answer L119, ProgressGUIDs L131, Check L169, P.Members L200, P.Count L224, P.Report L240, Show L245, Missing L297, LabelSize L315, Label L319, CurrentStyle L357, Shade L362, SetShape L368, TextWidth L380, P.BadgeWidth L393
-- **Tooltip** L405: RecolorNames L411, Listed L435, ObjectiveNames L458, AddMemberProgress L477, CanShare L516, ShowTooltip L520
-- **Badge** L561: OnClick L564, Build L578, Paint L599, Create L685, P.CreatePreview L702, preview:ShowStyle L705, Pop L715, P.Attach L741, P.Detach L764, HookQuestie L783, Changed L789
+- **(top)** L1: Readable L13, ClassColor L17, Member L27, QuestieComms L50, ShortName L68, QuestieNames L73, QuestieObjectives L96, Answer L119, ProgressGUIDs L131, Check L169, P.Members L200, P.Count L224, P.Report L240, Show L245, Missing L297, LabelSize L315, Label L319, CurrentStyle L357, Shade L362, SetShape L368, TextWidth L380, SlotWidth L396, P.BadgeWidth L413
+- **Tooltip** L425: RecolorNames L431, Listed L455, ObjectiveNames L478, AddMemberProgress L497, CanShare L536, ShowTooltip L540
+- **Badge** L581: OnClick L584, Build L598, Paint L619, Create L707, P.CreatePreview L724, preview:ShowStyle L727, Pop L737, P.Attach L763, P.Detach L786, HookQuestie L805, Changed L811
 
 ## Tracker/Tracker.lua (976 lines)
 
