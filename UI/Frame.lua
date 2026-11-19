@@ -37,6 +37,16 @@ local function Locked()
 	return InCombatLockdown() and Q.Tracker.ItemsInUse()
 end
 
+-- Room for one more header icon (and its gap) on the right while the Extras switch shows the target button. The title
+-- and the search box stop that much sooner, and the frame can't be narrower than that room needs.
+function F.ExtraRight()
+	return (Q.db and Q.db.superFocus) and ICON_SIZE + 5 or 0
+end
+
+local function MinWidth()
+	return MIN_WIDTH + F.ExtraRight()
+end
+
 function F.TooltipAnchor()
 	local point = Q.db and Q.db.point or "TOPRIGHT"
 	return point:find("RIGHT") and "ANCHOR_LEFT" or "ANCHOR_RIGHT"
@@ -246,7 +256,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- Header
 ------------------------------------------------------------------------------------------------------------------------
--- Header icons appear on hover. One that shows an active state (unlocked, zone focus) stays visible while active.
+-- Header icons appear on hover. One that shows an active state (unlocked, zone focus, focus mode) stays visible while active.
 local function ShowControls(show)
 	for _, button in ipairs(controls) do
 		local available = not button.available or button.available()
@@ -408,6 +418,28 @@ local function CreateHeader()
 	end)
 	cog:SetPoint("RIGHT", lock, "LEFT", -5, 0)
 
+	-- Focus mode button (Extras page): shown only while the Extras switch is on; stays visible and bright while focus
+	-- mode is lit.
+	local function FocusTip()
+		if Q.Tracker.FocusModeOn() then
+			return "Focus mode on: click to show every quest's objectives"
+		end
+		return "Focus mode: fold every quest but the one you focus"
+	end
+	local target = HeaderButton("", MEDIA .. "FocusTarget", ICON_SIZE, FocusTip, function()
+		Q.Tracker.ToggleFocusMode()
+		F.UpdateHeader()
+		GameTooltip:SetText(FocusTip())
+	end)
+	target:SetPoint("RIGHT", cog, "LEFT", -5, 0)
+	target.available = function()
+		return Q.db and Q.db.superFocus
+	end
+	target.keepVisible = function()
+		return Q.Tracker.FocusModeOn()
+	end
+	header.target = target
+
 	header:SetScript("OnEnter", function()
 		ShowControls(true)
 	end)
@@ -456,6 +488,14 @@ function F.SetHighlight(key)
 		highlight.fill:SetPoint("TOPLEFT", header.title, "TOPLEFT", -4, 3)
 		highlight.fill:SetPoint("BOTTOMRIGHT", header.title, "BOTTOMRIGHT", 4, -3)
 		highlight.fill:Show()
+	elseif key == "target" then
+		if header.target:IsShown() then
+			highlight.fill:SetPoint("TOPLEFT", header.target, "TOPLEFT", -3, 3)
+			highlight.fill:SetPoint("BOTTOMRIGHT", header.target, "BOTTOMRIGHT", 3, -3)
+			highlight.fill:Show()
+		else
+			highlight.fill:Hide()
+		end
 	elseif key == "search" then
 		local region = F.SearchRegion()
 		highlight.fill:SetPoint("TOPLEFT", region, "TOPLEFT", -3, 3)
@@ -485,10 +525,12 @@ function F.UpdateHeader()
 	-- Always centred, clear of the icons on both sides.
 	title:ClearAllPoints()
 	title:SetPoint("LEFT", 50, 0)
-	title:SetPoint("RIGHT", -50, 0)
+	title:SetPoint("RIGHT", -50 - F.ExtraRight(), 0)
 	title:SetJustifyH("CENTER")
 	local focusColor = db.focusZone and BRIGHT or EDGE
 	header.focus.icon:SetVertexColor(focusColor.r, focusColor.g, focusColor.b)
+	local modeColor = Q.Tracker.FocusModeOn() and BRIGHT or EDGE
+	header.target.icon:SetVertexColor(modeColor.r, modeColor.g, modeColor.b)
 	F.UpdateZoneTools()
 	F.PlaceSearch()
 	local minimize = header.minimize
@@ -639,7 +681,7 @@ function F.Create()
 	host:SetClampedToScreen(true)
 	host:SetMovable(true)
 	host:SetResizable(true)
-	host:SetResizeBounds(MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT)
+	host:SetResizeBounds(MinWidth(), MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT)
 	if host.SetDontSavePosition then
 		host:SetDontSavePosition(true)
 	end
@@ -718,7 +760,8 @@ function F.Apply()
 		return
 	end
 	local db = Q.db
-	db.width = Clamp(db.width, MIN_WIDTH, MAX_WIDTH)
+	db.width = Clamp(db.width, MinWidth(), MAX_WIDTH)
+	host:SetResizeBounds(MinWidth(), MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT)
 	db.maxHeight = Clamp(db.maxHeight, MIN_HEIGHT, MAX_HEIGHT)
 	host:SetScale(db.scale)
 	host:SetWidth(db.width)

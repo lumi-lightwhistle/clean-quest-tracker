@@ -215,10 +215,23 @@ end
 
 -- Label and note on the left of a row. If they wrap onto more lines than the row was sized for, the row grows (and
 -- the rows after it move down), so text never spills into the next row.
-local function Labels(page, row, label, note, width)
+-- `icon` is a texture drawn before the label, in the accent colour, so a row can show the part of the tracker it
+-- belongs to (the Extras page uses the Quests bar's own icon).
+local ICON_SIZE = 18
+local ICON_ROOM = ICON_SIZE + 8 -- an icon's width plus the gap after it
+local function Labels(page, row, label, note, width, icon)
 	width = width or (PAGE_WIDTH - CONTROL_WIDTH - 30)
+	local left = icon and 14 + ICON_ROOM or 14
+	if icon then
+		width = width - ICON_ROOM
+		local picture = row:CreateTexture(nil, "ARTWORK")
+		picture:SetTexture(icon)
+		picture:SetSize(ICON_SIZE, ICON_SIZE)
+		picture:SetPoint("LEFT", 14, 0)
+		picture:SetVertexColor(C.accent[1], C.accent[2], C.accent[3])
+	end
 	local title = Text(row, "GameFontHighlight", 14, TEXT)
-	title:SetPoint("TOPLEFT", 14, note and -9 or -15)
+	title:SetPoint("TOPLEFT", left, note and -9 or -15)
 	title:SetWidth(width)
 	title:SetText(label)
 	local needed = 9 + math.ceil(title:GetStringHeight()) + 9
@@ -249,7 +262,7 @@ end
 -- Pill switch.
 local function Toggle(page, spec)
 	local row = Row(page, RowHeight(spec.note), spec.hl)
-	Labels(page, row, spec.label, spec.note, PAGE_WIDTH - 90)
+	Labels(page, row, spec.label, spec.note, PAGE_WIDTH - 90, spec.icon)
 	local switch = CreateFrame("Button", nil, row)
 	switch:SetSize(38, 20)
 	switch:SetPoint("RIGHT", -14, 0)

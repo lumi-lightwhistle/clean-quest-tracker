@@ -67,6 +67,9 @@ Q.defaults = {
 	searchStyle = "marker", -- "marker" (a strip behind the matched letters, which turn white) or "letters"
 	colorSearch = "4fd1b5", -- the marker strip, or the letters in Letters style
 	searchZones = false, -- a zone name that matches shows all of that zone's quests
+	-- extras (optional; off until a player turns them on)
+	superFocus = false, -- show the focus mode target button in the Quests bar
+	focusQuest = false, -- the target button is lit (focus mode; only counts while superFocus is on)
 	point = "TOPRIGHT",
 	x = -70,
 	y = -220,

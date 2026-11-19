@@ -23,6 +23,8 @@ function T.Signature()
 			end
 		end
 		signatureParts[#signatureParts + 1] = C_QuestLog.GetNumQuestLogEntries()
+		-- Focus mode folds every quest but the focused one, so a change of focus changes the list.
+		signatureParts[#signatureParts + 1] = T.FocusModeOn() and C_SuperTrack.GetSuperTrackedQuestID() or 0
 	end)
 	return ok and table.concat(signatureParts, ",") or nil
 end
@@ -42,6 +44,7 @@ local WATCH_EVENTS = {
 	"QUEST_TURNED_IN",
 	"BAG_UPDATE_DELAYED",
 	"CVAR_UPDATE", -- the quest map icon setting changes how much room titles get
+	"SUPER_TRACKING_CHANGED", -- clicking a quest's round icon; focus mode folds the other quests
 }
 local FOLLOW_UP = { QUEST_WATCH_UPDATE = true, BAG_UPDATE_DELAYED = true, UNIT_QUEST_LOG_CHANGED = true }
 

@@ -695,7 +695,10 @@ local function Paint(badge, count, size, style)
 		end
 	elseif style == "split" then
 		icon:SetPoint("CENTER", block, "CENTER", 0, 0)
-		label:SetPoint("LEFT", (textMode and 7 or SPLIT_ICON + 7) + nudge, 0)
+		-- The game font's digits sit about a pixel high in their line (the line leaves room for letters that hang
+		-- below), and its "1" has its ink to the right of its cell, so both are pulled back to the box's centre.
+		local inkX = (not textMode and count == 1) and -1 or 0
+		label:SetPoint("LEFT", (textMode and 7 or SPLIT_ICON + 7) + nudge + inkX, -1)
 	elseif textMode then
 		label:SetPoint("LEFT", PAD_LEFT + 2 + nudge, 0)
 	else

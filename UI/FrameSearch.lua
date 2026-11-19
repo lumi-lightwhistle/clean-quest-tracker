@@ -11,7 +11,7 @@ local F = Q.Frame
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 local ICON_SIZE = 18
 local EDIT_HEIGHT = 20 -- the text field inside the box (the box itself is as tall as the bar)
-local BOX_RIGHT = 68 -- the box stops short of the cog and padlock
+local BOX_RIGHT = 68 -- the box stops short of the cog and padlock (and the target button, when on)
 local CLOSED_WIDTH = ICON_SIZE + 4
 -- The text field's room inside the box: it starts after the glass (4 in, 13 wide, 3 gap) and stops short of the count
 -- (24 from the right) and the X (18 wide, 2 in), with room for a count like "12/25".
@@ -60,7 +60,8 @@ local function LeftOffset()
 end
 
 local function FullWidth()
-	return math.max(60, header:GetWidth() - (LeftOffset() - 2) - BOX_RIGHT)
+	-- With focus mode's target button in the bar, the box stops one icon sooner.
+	return math.max(60, header:GetWidth() - (LeftOffset() - 2) - BOX_RIGHT - F.ExtraRight())
 end
 
 local function FadeTitle(alpha)
