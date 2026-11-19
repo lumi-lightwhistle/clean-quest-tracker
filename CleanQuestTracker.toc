@@ -3,7 +3,7 @@
 ## Notes: Quest tracker with zone groups, party counts, progress bars and a resizable frame.
 ## Author: Jack
 # x-release-please-start-version
-## Version: 0.8.6
+## Version: 0.8.7
 # x-release-please-end
 ## Category: Quests
 ## X-Curse-Project-ID: 1814563

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.7](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.6...v0.8.7) (2026-11-19)
+
+
+### ✨ New
+
+* Add an optional Super focus mode on a new Extras settings page ([42747e4](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/42747e4fc5ae36f15ba387ca69711a9398e4cd1c))
+
+
+### 🐛 Fixed
+
+* Party badge numbers sit in the middle of their box in the Split style ([42747e4](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/42747e4fc5ae36f15ba387ca69711a9398e4cd1c))
+* Party badges no longer overlap, and finished quests glide cleanly when sorted ([#32](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/32)) ([bda57b4](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/bda57b4b9e423a3cec97072c13d8e37c3c20ca71))
+* Party badges stay the same size whatever the count ([#27](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/27)) ([e402e74](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/e402e7452c2ae936ce49eefebfa6619245b6d4a7))
+
 ## [0.8.6](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.5...v0.8.6) (2026-11-19)
 
 
