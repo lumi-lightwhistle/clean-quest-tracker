@@ -88,7 +88,11 @@ function T.Glide(before)
 end
 
 -- Blocks faded out for a fold that are still on screen after the layout (the fold was undone) come back.
+-- A layout during a fade leaves the fading blocks alone; the layout after the fold restores any still shown.
 function T.RestoreFaded()
+	if folding then
+		return
+	end
 	T.module:EnumerateActiveBlocks(function(block)
 		if block.qcFaded then
 			block.qcFaded = nil
@@ -122,8 +126,11 @@ function T.FadeOutThen(zones, apply)
 		block.qcFaded = true
 	end
 	Motion.Tween("qc-fold", 1, 0, duration, function(alpha)
+		-- Only blocks still fading: one freed mid-fade by a layout goes back to the pool and must keep full alpha.
 		for _, block in ipairs(fading) do
-			block:SetAlpha(alpha)
+			if block.qcFaded then
+				block:SetAlpha(alpha)
+			end
 		end
 	end, function()
 		folding = false

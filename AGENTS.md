@@ -35,7 +35,7 @@ committing.
 
 ## Files
 - `Core/Core.lua`: settings, defaults, presets, migrations (`Q.SCHEMA`; bump it whenever a saved value changes meaning), the `Q.Color` and `Q.Motion` helpers, and events.
-- `Tracker/Tracker.lua`: the quest list itself. Files beside it share state through `Q.Tracker` (T): Zones (zone headings and the fold/focus/expand tools), Pools (including the quest focus icons), Items, Spoken, Motion, Highlight (the gold shading when a setting is hovered), Search, Watch.
+- `Tracker/Tracker.lua`: the quest list itself. Files beside it share state through `Q.Tracker` (T): Zones (zone headings and the zone tools: folding, the pin, and the arrows button's three steps), Pools (including the quest focus icons), Items, Spoken, Motion, Highlight (the gold shading when a setting is hovered), Search, Watch.
 - `UI/Frame.lua`: the frame, header and icons. `UI/FrameSearch.lua` is the search box in the header; `Tracker/TrackerSearch.lua` does the matching, highlighted letters and marker strips (placed with `FontString:CalculateScreenAreaFromCharacterSpan`, which this client has).
 - `Tracker/Party.lua`: party detection and badge styles.
 - `UI/Options.lua`: the custom-drawn settings window and its controls. `UI/OptionsPages.lua` lists what each page holds (General, Quests, Layout, Colours, Party, Search, Animations); add or move settings there. A row can be greyed out while it doesn't apply (`enabledBy`, `disabledBy`, `enabledWhen`, with `needs` for the tooltip); the options are listed at the top of that file.

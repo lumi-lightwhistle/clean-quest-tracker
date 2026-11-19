@@ -246,7 +246,8 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- Header
 ------------------------------------------------------------------------------------------------------------------------
--- Header icons appear on hover. One that shows an active state (unlocked, zone focus) stays visible while active.
+-- Header icons appear on hover. One that shows an active state (unlocked, zone focus, all except the focused quest)
+-- stays visible while active.
 local function ShowControls(show)
 	for _, button in ipairs(controls) do
 		local available = not button.available or button.available()
@@ -268,6 +269,21 @@ local function HeaderLeave()
 	end
 end
 
+-- Tints a header icon: brighter while what it controls is on, the header gold otherwise.
+local function Light(icon, lit)
+	local color = lit and BRIGHT or EDGE
+	icon:SetVertexColor(color.r, color.g, color.b)
+end
+
+-- A header icon's tooltip. `tooltip` returns the text, and optionally a second, wrapped line in white.
+local function SetTip(tooltip)
+	local text, detail = tooltip()
+	GameTooltip:SetText(text)
+	if detail then
+		GameTooltip:AddLine(detail, 1, 1, 1, true)
+	end
+end
+
 local function HeaderButton(texture, fallback, size, tooltip, onClick)
 	local button = CreateFrame("Button", nil, header)
 	button:SetSize(size, size)
@@ -284,7 +300,7 @@ local function HeaderButton(texture, fallback, size, tooltip, onClick)
 	button:SetScript("OnEnter", function(self)
 		ShowControls(true)
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
-		GameTooltip:SetText(tooltip())
+		SetTip(tooltip)
 		GameTooltip:Show()
 	end)
 	button:SetScript("OnLeave", function()
@@ -292,6 +308,7 @@ local function HeaderButton(texture, fallback, size, tooltip, onClick)
 		HeaderLeave()
 	end)
 	button:SetScript("OnClick", onClick)
+	button.tooltip = tooltip
 	controls[#controls + 1] = button
 	return button
 end
@@ -386,8 +403,19 @@ local function CreateHeader()
 	end
 	header.focus = focus
 
+	-- The arrows step through every zone open, all except the focused quest, and every zone folded (TrackerZones.lua).
+	-- The tooltip names the next step.
 	local function ExpandTip()
-		return Q.Tracker.AllExpanded() and "Collapse all zones" or "Expand all zones"
+		local T = Q.Tracker
+		if T.QuestFocusOn() then
+			return "Collapse all zones", T.NoFocusedQuest()
+				and "No tracked quest is focused, so every zone is folded now. Focus a quest from its right-click menu."
+				or nil
+		end
+		if T.AllExpanded() then
+			return "Collapse all except the focused quest"
+		end
+		return "Expand all zones"
 	end
 	local expand = HeaderButton("", MEDIA .. "ExpandAll", ICON_SIZE, ExpandTip, function()
 		Q.Tracker.ToggleAll()
@@ -396,6 +424,10 @@ local function CreateHeader()
 	header.expand = expand
 	expand:SetPoint("LEFT", focus, "RIGHT", 5, 0)
 	expand.available = Grouped
+	-- Lit and kept on screen while all except the focused quest is on, like the pin.
+	expand.keepVisible = function()
+		return Q.db and Q.Tracker.QuestFocusOn()
+	end
 
 	-- The magnifying glass and its box, right of the arrows (FrameSearch.lua).
 	F.CreateSearch(header)
@@ -466,16 +498,21 @@ function F.SetHighlight(key)
 	end
 end
 
--- The expand button shows arrows pointing out (expand all) or, when every zone is open, in (collapse all). Called after
--- each layout, since folding a single zone can change which one applies.
+-- The pin is lit while zone focus is on. The expand button shows arrows pointing out (expand all) or in (one of the two
+-- collapse steps), lit while all except the focused quest is on. Called after each layout, since folding a single zone
+-- can change which step comes next.
 function F.UpdateZoneTools()
 	if not header then
 		return
 	end
+	Light(header.focus.icon, Q.db.focusZone)
 	local expand = header.expand
-	expand.icon:SetTexture(MEDIA .. (Q.Tracker.AllExpanded() and "CollapseAll" or "ExpandAll"))
+	local focusQuest = Q.Tracker.QuestFocusOn()
+	expand.icon:SetTexture(MEDIA .. ((focusQuest or Q.Tracker.AllExpanded()) and "CollapseAll" or "ExpandAll"))
+	Light(expand.icon, focusQuest)
 	if GameTooltip:IsOwned(expand) then
-		GameTooltip:SetText(Q.Tracker.AllExpanded() and "Collapse all zones" or "Expand all zones")
+		SetTip(expand.tooltip)
+		GameTooltip:Show()
 	end
 end
 
@@ -487,8 +524,6 @@ function F.UpdateHeader()
 	title:SetPoint("LEFT", 50, 0)
 	title:SetPoint("RIGHT", -50, 0)
 	title:SetJustifyH("CENTER")
-	local focusColor = db.focusZone and BRIGHT or EDGE
-	header.focus.icon:SetVertexColor(focusColor.r, focusColor.g, focusColor.b)
 	F.UpdateZoneTools()
 	F.PlaceSearch()
 	local minimize = header.minimize
@@ -503,8 +538,7 @@ function F.UpdateHeader()
 	-- Locked: closed padlock in the header gold. Unlocked: open padlock, brighter, and kept on screen.
 	local lockIcon = header.lock.icon
 	lockIcon:SetTexture(MEDIA .. (db.locked and "Locked" or "Unlocked"))
-	local color = db.locked and EDGE or BRIGHT
-	lockIcon:SetVertexColor(color.r, color.g, color.b)
+	Light(lockIcon, not db.locked)
 	ShowControls(header:IsMouseOver())
 end
 

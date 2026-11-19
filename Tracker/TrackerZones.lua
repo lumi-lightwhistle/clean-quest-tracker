@@ -1,6 +1,6 @@
 -- Clean Quest Tracker: zone heading rows (arrow, name, quest count and the line under it) and the zone tools: folding
--- a zone, focus on the current zone, and expand or collapse all. The list (Tracker.lua) lays out a heading row for
--- each zone with T.StyleZone.
+-- a zone, zone focus (the pin), and the arrows button (expand all, all except the focused quest, collapse all).
+-- The list (Tracker.lua) lays out a heading row for each zone with T.StyleZone.
 
 local _, Q = ...
 local T = Q.Tracker
@@ -121,7 +121,8 @@ function T.StyleZone(block, group)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
--- Zone tools: fold one zone, focus the current zone, expand or collapse all
+-- Zone tools: fold one zone, zone focus (the pin), and the arrows button (expand all, all except the focused quest,
+-- collapse all)
 ------------------------------------------------------------------------------------------------------------------------
 local function TurnZoneArrow(name, folded)
 	-- While searching every listed zone stays open, so the arrow would only swing and swing back.
@@ -134,8 +135,9 @@ local function TurnZoneArrow(name, folded)
 	end
 end
 
--- Folding a zone by hand ends focus mode, so the list doesn't undo the player's choice on the next zone change.
--- Folding fades the zone's quests out first; the rows below then glide up in the layout that follows.
+-- Folding or opening a zone by hand ends zone focus (the pin) and all except the focused quest, so the list doesn't
+-- undo the player's choice on the next zone or focus change. Folding fades the zone's quests out first; the rows below
+-- then glide up in the layout that follows.
 function T.ToggleZone(name)
 	if T.IsFolding() then
 		return
@@ -145,6 +147,7 @@ function T.ToggleZone(name)
 	local function Apply()
 		Q.db.collapsed[name] = closing or nil
 		Q.db.focusZone = false
+		Q.db.focusQuest = false
 		Q.db.collapsedBeforeFocus = nil
 		T.MarkDirty()
 		Q.Frame.UpdateHeader()
@@ -160,14 +163,29 @@ local function CurrentZone()
 	return GetRealZoneText and GetRealZoneText() or ""
 end
 
+-- Opens one zone and folds every other (none open when `keep` is nil).
+local function OpenOnly(keep)
+	for _, name in ipairs(T.zoneNames or {}) do
+		Q.db.collapsed[name] = (name ~= keep) or nil
+	end
+end
+
+-- The zones other than `keep` (every zone when `keep` is nil), as a set.
+local function ZonesExcept(keep)
+	local zones = {}
+	for _, name in ipairs(T.zoneNames or {}) do
+		if name ~= keep then
+			zones[name] = true
+		end
+	end
+	return zones
+end
+
 -- Folds every zone group except the one you're in, and keeps doing so as you travel.
 function T.FocusCurrentZone()
-	local db = Q.db
 	local here = CurrentZone()
-	db.focusZone = true
-	for _, name in ipairs(T.zoneNames or {}) do
-		db.collapsed[name] = (name ~= here) or nil
-	end
+	Q.db.focusZone = true
+	OpenOnly(here)
 	T.MarkDirty()
 	return T.HasZone(here)
 end
@@ -193,6 +211,8 @@ function T.ToggleFocus()
 		saved[name] = folded
 	end
 	db.collapsedBeforeFocus = saved
+	-- Zone focus replaces the arrows button's "all except the focused quest".
+	db.focusQuest = false
 	-- The pin lights up straight away; the other zones fade, then fold.
 	local here = CurrentZone()
 	local closing = {}
@@ -217,7 +237,64 @@ function T.AllExpanded()
 	return true
 end
 
--- The arrows button: opens every zone, or folds them all when they're all open already. Either way it ends focus mode.
+------------------------------------------------------------------------------------------------------------------------
+-- All except the focused quest: the zone of the focused (super-tracked) quest stays open and every other zone folds;
+-- inside that zone, the other quests show their title only. It is a mode, saved as focusQuest, that follows the focus:
+-- each layout re-folds around whichever quest is focused now. With no tracked quest focused, every zone folds. It only
+-- applies while quests are grouped by zone, like the arrows button itself.
+------------------------------------------------------------------------------------------------------------------------
+local function FocusedQuest()
+	local questID = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and C_SuperTrack.GetSuperTrackedQuestID()
+	if not Q.Readable(questID) or questID == 0 then
+		return nil
+	end
+	return questID
+end
+
+-- The zone the focused quest is listed under, or nil (nothing focused, or the focused quest isn't tracked).
+local function FocusedZone()
+	local questID = FocusedQuest()
+	return questID and T.questZones and T.questZones[questID]
+end
+
+function T.QuestFocusOn()
+	return (Q.db.focusQuest and Q.db.grouping) and true or false
+end
+
+-- True when a quest folds to its title. Never while searching: a match in an objective line must stay visible.
+function T.QuestFolded(questID)
+	return T.QuestFocusOn() and not T.SearchActive() and questID ~= FocusedQuest()
+end
+
+-- True when no tracked quest is focused, so all except the focused quest has no zone to keep open (the arrows tooltip
+-- says so).
+function T.NoFocusedQuest()
+	return FocusedZone() == nil
+end
+
+-- Folds every zone except the focused quest's. Tracker.lua calls it on each layout while the mode is on.
+function T.FoldToFocusedQuest()
+	OpenOnly(FocusedZone())
+end
+
+-- Fades the given zones' quests out, then folds them. `focusQuest` is the mode to switch to; it changes only once the
+-- fade ends, so a layout during the fade can't fold or unfold anything under it.
+local function FoldZones(closing, focusQuest)
+	for name in pairs(closing) do
+		TurnZoneArrow(name, true)
+	end
+	T.FadeOutThen(closing, function()
+		for name in pairs(closing) do
+			Q.db.collapsed[name] = true
+		end
+		Q.db.focusQuest = focusQuest
+		T.MarkDirty()
+		Q.Frame.UpdateHeader()
+	end)
+end
+
+-- The arrows button steps through three states: every zone open, then all except the focused quest, then every zone
+-- folded, then open again. A list that is partly folded by hand opens fully first. Any step ends zone focus (the pin).
 function T.ToggleAll()
 	local db = Q.db
 	if T.IsFolding() then
@@ -225,23 +302,19 @@ function T.ToggleAll()
 	end
 	db.focusZone = false
 	db.collapsedBeforeFocus = nil
+	if db.focusQuest then
+		-- All except the focused quest, to every zone folded.
+		FoldZones(ZonesExcept(nil), false)
+		return
+	end
 	if not T.AllExpanded() then
 		wipe(db.collapsed)
 		T.MarkDirty()
 		return
 	end
-	local closing = {}
-	for _, name in ipairs(T.zoneNames or {}) do
-		closing[name] = true
-		TurnZoneArrow(name, true)
-	end
-	T.FadeOutThen(closing, function()
-		for name in pairs(closing) do
-			db.collapsed[name] = true
-		end
-		T.MarkDirty()
-		Q.Frame.UpdateHeader()
-	end)
+	-- Every zone open, to all except the focused quest: the other zones fade, then fold, and the layout that follows
+	-- folds the other quests in the focused zone to their titles.
+	FoldZones(ZonesExcept(FocusedZone()), true)
 end
 
 function T.HasZone(name)

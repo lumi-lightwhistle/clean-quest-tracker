@@ -18,6 +18,7 @@ Q.defaults = {
 	grouping = true,
 	currentFirst = true,
 	focusZone = false, -- keep only the current zone open, following you as you travel
+	focusQuest = false, -- the arrows button's middle step, all except the focused quest; follows the focus
 	levels = true,
 	difficulty = true,
 	foldComplete = true,
@@ -566,7 +567,7 @@ events:SetScript("OnEvent", function(_, event, arg1)
 	elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
 		Q.Frame.Apply()
 	elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
-		-- A new zone re-sorts the list (current zone first) and, in focus mode, opens the new zone instead.
+		-- A new zone re-sorts the list (current zone first) and, with zone focus (the pin) on, opens the new zone instead.
 		Q.Tracker.OnZoneChanged()
 	else
 		Q.Refresh()

@@ -6,7 +6,7 @@
 --
 -- This file owns the list: what it shows, its layout, zone folding, clicks and the update cycle. The rest of the
 -- tracker lives beside it, loaded after it, and shares state through the Q.Tracker table (T):
---   TrackerZones.lua      zone heading rows and the zone tools (fold, focus, expand all)
+--   TrackerZones.lua      zone heading rows and the zone tools (fold, the pin, the arrows button's three steps)
 --   TrackerPools.lua      private frame and POI-button pools (keeps Blizzard's tracker untainted)
 --   TrackerItems.lua      secure quest item buttons
 --   TrackerSpoken.lua     Spoken's play button
@@ -543,7 +543,7 @@ function M:OnFreeBlock(block)
 	if block.qcRule then
 		block.qcRule:Hide()
 	end
-	block.qcItemIndex = nil
+	block.qcItemIndex, block.qcTitleOnly = nil, nil
 	block.qcTitle, block.qcTitleHi, block.qcZone, block.qcGroup = nil, nil, nil, nil
 	T.HideSearchMarks(block)
 	T.StopMotion(block)
@@ -678,8 +678,21 @@ function M:QCQuest(quest, grouped)
 		T.Glow(block)
 	end
 
-	local waypoint = showWaypoint and C_QuestLog.GetNextWaypointText and C_QuestLog.GetNextWaypointText(questID)
-	if isComplete then
+	-- Folded to its title (the arrows button's "all except the focused quest"): no objectives, bars or timer, only the
+	-- one-line status a player must see ("click to complete", "Failed"). A quest unfolding is drawn as new, so its lines
+	-- don't play the "next step" sound and roll-in meant for sequenced quests.
+	local titleOnly = T.QuestFolded(questID)
+	if block.qcTitleOnly then
+		isExisting = false
+	end
+	block.qcTitleOnly = titleOnly
+	if titleOnly then
+		if isComplete and info.isAutoComplete then
+			AddLine(block, "ClickComplete", QUEST_WATCH_CLICK_TO_COMPLETE, OBJECTIVE_DASH_STYLE_HIDE, Q.CompleteColor())
+		elseif not isComplete and C_QuestLog.IsFailed(questID) then
+			AddLine(block, "Failed", FAILED, OBJECTIVE_DASH_STYLE_HIDE, OBJECTIVE_TRACKER_COLOR["Failed"])
+		end
+	elseif isComplete then
 		-- Finished: the objectives play Blizzard's check-and-fade, then the quest collapses to its title. Quests that
 		-- complete from the tracker keep their "click to complete" line, since that is how they are turned in.
 		local completing = self:QCObjectives(block, questID, logIndex, true, isSequenced, isExisting)
@@ -689,6 +702,7 @@ function M:QCQuest(quest, grouped)
 	elseif C_QuestLog.IsFailed(questID) then
 		AddLine(block, "Failed", FAILED, OBJECTIVE_DASH_STYLE_HIDE, OBJECTIVE_TRACKER_COLOR["Failed"])
 	else
+		local waypoint = showWaypoint and C_QuestLog.GetNextWaypointText and C_QuestLog.GetNextWaypointText(questID)
 		if waypoint and WAYPOINT_OBJECTIVE_FORMAT_OPTIONAL then
 			AddLine(block, "Waypoint", WAYPOINT_OBJECTIVE_FORMAT_OPTIONAL:format(waypoint))
 		end
@@ -714,7 +728,7 @@ function M:QCQuest(quest, grouped)
 		block.height = math.max(block.height, ITEM_SIZE)
 	end
 	-- The module skips Blizzard's shared POI check (showWorldQuests), so the quest-POI setting is honoured here. A short
-	-- row (a finished quest folded to its title) is stretched to hold its icon, so icons never overlap.
+	-- row (a quest folded to its title) is stretched to hold its icon, so icons never overlap.
 	if T.PoiShown() then
 		block.height = math.max(block.height, T.PoiMinRow())
 		block:SetPOIInfo(questID, isComplete, isSuperTracked)
@@ -739,12 +753,19 @@ function M:LayoutContents()
 	local list = Collect()
 	self.qcCount, self.qcTotal = #list, #list
 	local groups = Group(list)
-	-- Zone names come from the whole list, so the zone tools (focus, expand all) see every zone while searching.
-	local names = {}
+	-- Zone names come from the whole list, so the zone tools (the pin, the arrows) see every zone while searching.
+	local names, questZone = {}, {}
 	for _, group in ipairs(groups) do
 		names[#names + 1] = group.name
+		for _, quest in ipairs(group.quests) do
+			questZone[quest.id] = group.name
+		end
 	end
-	T.zoneNames = names
+	T.zoneNames, T.questZones = names, questZone
+	-- "All except the focused quest" follows the focus: each layout re-folds the zones around the focused quest.
+	if T.QuestFocusOn() then
+		T.FoldToFocusedQuest()
+	end
 	local searching = T.SearchActive()
 	if searching then
 		local kept, shown = {}, 0
