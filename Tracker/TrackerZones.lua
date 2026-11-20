@@ -1,6 +1,6 @@
--- Clean Quest Tracker: zone heading rows (arrow, name, quest count and the line under it) and the zone tools: folding
--- a zone, focus on the current zone, and expand or collapse all. The list (Tracker.lua) lays out a heading row for
--- each zone with T.StyleZone.
+-- Clean Quest Tracker: zone heading rows (arrow, name, quest count and the line under it), which zone you're in, and
+-- the zone tools: folding a zone, focus on the current zone, and expand or collapse all. The list (Tracker.lua) lays
+-- out a heading row for each zone with T.StyleZone and sorts your zone first with T.CurrentZone.
 
 local _, Q = ...
 local T = Q.Tracker
@@ -121,6 +121,83 @@ function T.StyleZone(block, group)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
+-- Where you are
+------------------------------------------------------------------------------------------------------------------------
+-- The names your current place goes by, best first: the zone the game reports, the zone-level map you're on (a cave,
+-- mine or building can report its own name while its map still sits in Westfall), and the zone text. They are read on
+-- zone events only, so a redraw for any other reason (a quest completing, an objective ticking) never re-sorts zones.
+local places = {}
+
+local function Name(value)
+	if Q.Readable(value) and type(value) == "string" and value ~= "" then
+		return value
+	end
+end
+
+-- The name of the zone-level map you're on, climbing out of dungeon, building and sub-area maps.
+local function ZoneMapName()
+	if not (C_Map and C_Map.GetBestMapForUnit and C_Map.GetMapInfo) then
+		return nil
+	end
+	local zoneType = Enum and Enum.UIMapType and Enum.UIMapType.Zone or 3
+	local ok, mapID = pcall(C_Map.GetBestMapForUnit, "player")
+	for _ = 1, 8 do
+		if not ok or not Q.Readable(mapID) or not mapID then
+			return nil
+		end
+		local info
+		ok, info = pcall(C_Map.GetMapInfo, mapID)
+		if not ok or not info or not Q.Readable(info.mapType) or not info.mapType then
+			return nil
+		end
+		if info.mapType == zoneType then
+			return Name(info.name)
+		elseif info.mapType < zoneType then
+			return nil -- climbed past the zone to a continent
+		end
+		mapID = info.parentMapID
+	end
+	return nil
+end
+
+-- Reads where you are again. Returns true when any of the names changed. During a loading screen the game has no zone
+-- yet; the last place is kept.
+function T.ReadWhere()
+	local real = Name(GetRealZoneText and GetRealZoneText())
+	if not real then
+		return false
+	end
+	local fresh = { real }
+	for _, extra in ipairs({ ZoneMapName() or false, Name(GetZoneText and GetZoneText()) or false }) do
+		if extra and extra ~= real then
+			fresh[#fresh + 1] = extra
+		end
+	end
+	local changed = #fresh ~= #places
+	for index, name in ipairs(fresh) do
+		changed = changed or places[index] ~= name
+	end
+	places = fresh
+	return changed
+end
+
+-- The zone heading you're in: the first of your place's names that is a zone in `names` (default: the zones listed in
+-- the last layout), or nil when none of your quests are in this zone.
+function T.CurrentZone(names)
+	if not places[1] then
+		T.ReadWhere()
+	end
+	for _, place in ipairs(places) do
+		for _, name in ipairs(names or T.zoneNames or {}) do
+			if name == place then
+				return name
+			end
+		end
+	end
+	return nil
+end
+
+------------------------------------------------------------------------------------------------------------------------
 -- Zone tools: fold one zone, focus the current zone, expand or collapse all
 ------------------------------------------------------------------------------------------------------------------------
 local function TurnZoneArrow(name, folded)
@@ -156,20 +233,12 @@ function T.ToggleZone(name)
 	end
 end
 
-local function CurrentZone()
-	return GetRealZoneText and GetRealZoneText() or ""
-end
-
--- Folds every zone group except the one you're in, and keeps doing so as you travel.
+-- Folds every zone group except the one you're in, and keeps doing so as you travel: the list does the folding on each
+-- redraw while focus is on (Tracker.lua, M:LayoutContents). Returns whether your zone has a heading.
 function T.FocusCurrentZone()
-	local db = Q.db
-	local here = CurrentZone()
-	db.focusZone = true
-	for _, name in ipairs(T.zoneNames or {}) do
-		db.collapsed[name] = (name ~= here) or nil
-	end
+	Q.db.focusZone = true
 	T.MarkDirty()
-	return T.HasZone(here)
+	return T.CurrentZone() ~= nil
 end
 
 -- The pin button: on, remember how the zones were folded and keep only the current zone open; off, put them back.
@@ -194,7 +263,7 @@ function T.ToggleFocus()
 	end
 	db.collapsedBeforeFocus = saved
 	-- The pin lights up straight away; the other zones fade, then fold.
-	local here = CurrentZone()
+	local here = T.CurrentZone()
 	local closing = {}
 	for _, name in ipairs(T.zoneNames or {}) do
 		if name ~= here and not db.collapsed[name] then
@@ -244,16 +313,13 @@ function T.ToggleAll()
 	end)
 end
 
-function T.HasZone(name)
-	for _, zone in ipairs(T.zoneNames or {}) do
-		if zone == name then
-			return true
-		end
+-- A new zone (or, with `minor`, a new sub-area) re-reads where you are. A sub-area that leaves every name the same
+-- changes nothing, so walking around a zone doesn't redraw the list.
+function T.OnZoneChanged(minor)
+	local changed = T.ReadWhere()
+	if minor and not changed then
+		return
 	end
-	return false
-end
-
-function T.OnZoneChanged()
 	if Q.db.focusZone and Q.db.grouping then
 		T.FocusCurrentZone()
 	else

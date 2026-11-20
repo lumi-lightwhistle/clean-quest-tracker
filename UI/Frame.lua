@@ -403,7 +403,7 @@ local function CreateHeader()
 		local on = Q.Tracker.ToggleFocus()
 		F.UpdateHeader()
 		GameTooltip:SetText(on and "Show all zones again" or "Collapse every zone except the one you're in")
-		if on and not Q.Tracker.HasZone(GetRealZoneText()) then
+		if on and not Q.Tracker.CurrentZone() then
 			GameTooltip:AddLine("None of your tracked quests are in this zone yet.", 1, 1, 1, true)
 			GameTooltip:Show()
 		end

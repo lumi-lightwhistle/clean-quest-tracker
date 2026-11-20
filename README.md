@@ -38,7 +38,7 @@ A quest tracker for World of Warcraft Forever.
 &nbsp;<br>
 **Quests by zone**
 
-Your current zone stays on top and the list re-sorts as you travel. Fold zones one at a time, pin focus to keep only your current zone open, or expand everything in one click.<br>
+Your current zone stays on top, even in caves and buildings, and the list re-sorts when you enter a new zone. Fold zones one at a time, pin focus to keep only your current zone open (zones that join the list later fold too), or expand everything in one click.<br>
 &nbsp;
 
 </td>

@@ -165,6 +165,94 @@ local function Displayable(questID, info)
 	return not info.isTask and not info.isBounty
 end
 
+-- Tracked order. The game's watch list is the source (on this client a newly tracked quest goes to the front, so the
+-- newest sits on top), but the game can drop a quest from it and add it straight back at the front (as a quest
+-- completes), which would jump it to the top of its zone. So each quest keeps the place it had: a quest back within
+-- RETURN_GRACE seconds keeps its old place. A quest new to the list goes right after the quest before it in the watch
+-- list, or above everything when it is first. Places are saved per character, so a /reload doesn't undo them.
+local RETURN_GRACE = 3
+local goneAt = {}
+local sessionRanks = {}
+
+-- This character's saved places: { [questID] = place }.
+local function Ranks()
+	local db = Q.db
+	local name, realm = UnitName("player"), GetRealmName()
+	if not (db and db.questOrder and Q.Readable(name) and name and Q.Readable(realm) and realm) then
+		return sessionRanks
+	end
+	local key = name .. "-" .. realm
+	db.questOrder[key] = db.questOrder[key] or {}
+	return db.questOrder[key]
+end
+
+local function Rank(list)
+	local rank = Ranks()
+	local now = GetTime()
+	local present = {}
+	for _, quest in ipairs(list) do
+		present[quest.id] = true
+		if goneAt[quest.id] then
+			if now - goneAt[quest.id] > RETURN_GRACE then
+				rank[quest.id] = nil
+			end
+			goneAt[quest.id] = nil
+		end
+	end
+	-- An empty list is often the quest log not loaded yet (at login), so nothing is forgotten then.
+	if #list > 0 then
+		for questID in pairs(rank) do
+			if not present[questID] then
+				goneAt[questID] = goneAt[questID] or now
+				if now - goneAt[questID] > RETURN_GRACE then
+					rank[questID], goneAt[questID] = nil, nil
+				end
+			end
+		end
+	end
+	for index, quest in ipairs(list) do
+		if not rank[quest.id] then
+			local before = list[index - 1] and rank[list[index - 1].id]
+			if before then
+				-- Halfway to the next place up, so it lands right after `before`.
+				local nextUp
+				for _, value in pairs(rank) do
+					if value > before and (not nextUp or value < nextUp) then
+						nextUp = value
+					end
+				end
+				rank[quest.id] = nextUp and (before + nextUp) / 2 or before + 1
+			else
+				local lowest
+				for _, value in pairs(rank) do
+					lowest = math.min(lowest or value, value)
+				end
+				rank[quest.id] = (lowest or 1) - 1
+			end
+		end
+	end
+	-- Renumber 1, 2, 3... so halving never runs out, keeping ties in watch-list order.
+	local ids, watchPos = {}, {}
+	for index, quest in ipairs(list) do
+		watchPos[quest.id] = index
+	end
+	for questID in pairs(rank) do
+		ids[#ids + 1] = questID
+	end
+	table.sort(ids, function(a, b)
+		if rank[a] ~= rank[b] then
+			return rank[a] < rank[b]
+		end
+		return (watchPos[a] or math.huge) < (watchPos[b] or math.huge)
+	end)
+	for position, questID in ipairs(ids) do
+		rank[questID] = position
+	end
+	for _, quest in ipairs(list) do
+		quest.order = rank[quest.id]
+	end
+end
+
 -- One record per watched quest. The zone comes from the quest log; when a header is folded in the log the last zone
 -- seen for that quest is used, so folding the log never moves quests into "Other Quests".
 local function Collect()
@@ -189,7 +277,6 @@ local function Collect()
 					logIndex = logIndex,
 					info = info,
 					zone = zone,
-					order = watchIndex,
 					complete = C_QuestLog.IsComplete(questID) and true or false,
 				}
 			end
@@ -200,18 +287,18 @@ local function Collect()
 			db.zoneOf[questID] = nil
 		end
 	end
+	Rank(list)
 	return list
 end
 
--- Within a zone (or the whole list without zones), finished quests can sit above or below the rest. Each part keeps the order the quests were tracked in.
+-- Within a zone (or the whole list without zones), finished quests can sit above or below the rest. Each part keeps the
+-- tracked order (see Rank).
 local function SortFinished(quests)
 	local where = Q.db.completeOrder
-	if where ~= "top" and where ~= "bottom" then
-		return
-	end
+	local moves = where == "top" or where == "bottom"
 	local top = where == "top"
 	table.sort(quests, function(a, b)
-		if a.complete ~= b.complete then
+		if moves and a.complete ~= b.complete then
 			return a.complete == top
 		end
 		return a.order < b.order
@@ -237,7 +324,11 @@ local function Group(list)
 	for _, group in ipairs(groups) do
 		SortFinished(group.quests)
 	end
-	local here = GetRealZoneText and GetRealZoneText()
+	local names = {}
+	for _, group in ipairs(groups) do
+		names[#names + 1] = group.name
+	end
+	local here = T.CurrentZone(names)
 	table.sort(groups, function(a, b)
 		if db.currentFirst then
 			local aHere, bHere = a.name == here, b.name == here
@@ -251,7 +342,7 @@ local function Group(list)
 		end
 		return a.name < b.name
 	end)
-	return groups
+	return groups, here
 end
 
 -- Title with optional level prefix. Finished quests are the game's bright green with "(Complete)" after the title,
@@ -780,13 +871,20 @@ function M:LayoutContents()
 			end
 		end
 	end
-	local groups = Group(list)
+	local groups, here = Group(list)
 	-- Zone names come from the whole list, so the zone tools (focus, expand all) see every zone while searching.
 	local names = {}
 	for _, group in ipairs(groups) do
 		names[#names + 1] = group.name
 	end
 	T.zoneNames = names
+	-- Collapse every zone but yours, also for zones that join the list later (a follow-up quest elsewhere). Turning it
+	-- on fades the other zones first (T.ToggleFocus); folding mid-fade would cut that short, so it waits.
+	if db.focusZone and db.grouping and not T.IsFolding() then
+		for _, name in ipairs(names) do
+			db.collapsed[name] = (name ~= here) or nil
+		end
+	end
 	local searching = T.SearchActive()
 	if searching then
 		local kept, shown = {}, 0

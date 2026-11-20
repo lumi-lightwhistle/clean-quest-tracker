@@ -451,6 +451,8 @@ local function LoadSettings()
 	end
 	db.collapsed = type(db.collapsed) == "table" and db.collapsed or {}
 	db.zoneOf = type(db.zoneOf) == "table" and db.zoneOf or {}
+	-- Each character's quest order (Tracker.lua, Rank): name-realm -> { [questID] = place }.
+	db.questOrder = type(db.questOrder) == "table" and db.questOrder or {}
 	db.schema = Q.SCHEMA
 	Q.db = db
 end
@@ -551,6 +553,8 @@ events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+events:RegisterEvent("ZONE_CHANGED")
+events:RegisterEvent("ZONE_CHANGED_INDOORS")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("GROUP_ROSTER_UPDATE")
 events:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
@@ -592,6 +596,15 @@ events:SetScript("OnEvent", function(_, event, arg1)
 	elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
 		-- A new zone re-sorts the list (current zone first) and, in focus mode, opens the new zone instead.
 		Q.Tracker.OnZoneChanged()
+		if event == "PLAYER_ENTERING_WORLD" then
+			-- Right after a loading screen the map can still be missing; look again once it has settled.
+			C_Timer.After(1, function()
+				Q.Tracker.OnZoneChanged(true)
+			end)
+		end
+	elseif event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" then
+		-- Walking into a cave or building can change the zone name the game reports without a new area.
+		Q.Tracker.OnZoneChanged(true)
 	else
 		Q.Refresh()
 	end
