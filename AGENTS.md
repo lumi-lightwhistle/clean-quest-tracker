@@ -15,14 +15,15 @@ Read this whole file; it is short on purpose. Detail lives in `docs/agents/`, op
 3. **Make the change small.** Defaults must match what players have today unless the task is to change them.
    Match the file's style: header comment, `-----` section banners (the map is built from them).
 4. **Check.** `python tools/luacheck.py <file>` on every Lua file you touch, then `python tools/prereview.py`
-   (syntax, `.toc`, unread settings, highlight keys, stale wording; it also refreshes `docs/REPOMAP.md`). To try a
+   (syntax, `.toc`, unread settings, highlight keys, stale wording, offline tests; it also refreshes
+   `docs/REPOMAP.md`). The offline tests must pass; which change also needs `/cqttest`: `docs/testing.md`. To try a
    change in game, copy the changed files over the installed add-on and `/reload`; **make no backup copies, git is
    the backup** (`docs/agents/workflow.md`).
 5. **Review, sized to the change** (`pre-commit-review` skill, step 0): small fix = script plus one light reviewer;
    new setting, migration, preset or release = full review.
 6. **Ship.** PR title is the changelog line: Conventional Commits, written for players (`changelog` skill). Fill in
-   the PR checklist and say what was and wasn't tested in game. CI needs `lua-syntax` and `conventional-title`;
-   `main` needs one approval from the code owner and linear history, so PRs are squash-merged.
+   the PR checklist and say what was and wasn't tested in game. CI needs `lua-syntax`, `lua-tests` and
+   `conventional-title`; `main` needs one approval from the code owner and linear history, so PRs are squash-merged.
 7. **Never commit, push or merge unless the user asks.** Ask before deleting anything.
 
 ## Never
@@ -51,3 +52,4 @@ Read this whole file; it is short on purpose. Detail lives in `docs/agents/`, op
 - `docs/agents/quirks.md`: every known WoW, client, texture, font and Windows quirk, with the reason. Read before
   touching icons, fonts, textures, party detection, redraw timing or shell scripts.
 - `docs/agents/workflow.md`: tools, CI, releases, forks, token-saving habits, local-machine oddities.
+- `docs/testing.md`: the three test layers (offline, `/cqttest`, manual checklist) and which change needs which.

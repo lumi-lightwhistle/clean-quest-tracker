@@ -28,17 +28,17 @@ Party badge: how many other members of your party have each quest, who they are,
 - **Tooltip** L443: RecolorNames L449, Listed L473, ObjectiveNames L496, AddMemberProgress L515, CanShare L554, ShowTooltip L558
 - **Badge** L599: OnClick L602, Build L616, Paint L637, Create L728, P.CreatePreview L745, preview:ShowStyle L748, P.Attach L754, P.Detach L772, HookQuestie L791, Changed L797
 
-## Tracker/Tracker.lua (1116 lines)
+## Tracker/Tracker.lua (1129 lines)
 
 The quest list: Clean Quest Tracker's own objective tracker module, built from Blizzard's module and block templates. The module is a private instance. Its methods are overridden on this instance only; Blizzard's QuestObjectiveTracker and...
 
 - **(top)** L1: T.PoiShown L41, T.FocusModeOn L46, T.ToggleFocusMode L51, T.PoiSize L57, T.PoiRoom L63, T.PoiMinRow L75
 - **Small helpers** L86: Hex L90, Lighten L100, T.LinkQuest L109, T.ShareQuest L131
-- **Watched quests, grouped by quest-log zone** L140: ReadZones L143, Displayable L158, Ranks L178, Rank L189, Collect L258, SortFinished L296, Group L308, T.Title L351
-- **Lines and progress bars** L374: AddLine L380, MarkBarsUnused L387, HideUnusedBars L393, AddBar L403
-- **Quest menu (right-click), matching Blizzard's entries** L425: OpenQuestMenu L428
-- **Module overrides (this instance only)** L472: M:InitModule L477, M:CanUpdate L482, M:GetContextMenuParent L486, M:AcquireFrame L491, M:FreeBlock L500, M:FreeUnusedTimerBars L508, M:FreeUnusedProgressBars L517, M:FreeUnusedRightEdgeFrames L529, M:BeginLayout L541, M:OnEvent L565, M:OnBlockHeaderClick L584, M:OnBlockHeaderEnter L611, M:OnBlockHeaderLeave L627, M:OnFreeBlock L638, M:QCObjectives L661, M:QCQuest L743, M:LayoutContents L858
-- **Public** L931: T.QuestOffset L937, T.IsDirty L945, T.MarkDirty L950, T.Update L961, T.Rebuild L1004, T.OnCombatEnded L1019, WantNativeHidden L1032, T.ApplyNativeVisibility L1036, T.Create L1069, container:IsCollapsed L1073, container:ForceExpand L1076, container:MarkDirty L1081
+- **Watched quests, grouped by quest-log zone** L140: ReadZones L143, Displayable L158, Ranks L178, Rank L189, Collect L258, SortFinished L296, Group L308, T.Title L364
+- **Lines and progress bars** L387: AddLine L393, MarkBarsUnused L400, HideUnusedBars L406, AddBar L416
+- **Quest menu (right-click), matching Blizzard's entries** L438: OpenQuestMenu L441
+- **Module overrides (this instance only)** L485: M:InitModule L490, M:CanUpdate L495, M:GetContextMenuParent L499, M:AcquireFrame L504, M:FreeBlock L513, M:FreeUnusedTimerBars L521, M:FreeUnusedProgressBars L530, M:FreeUnusedRightEdgeFrames L542, M:BeginLayout L554, M:OnEvent L578, M:OnBlockHeaderClick L597, M:OnBlockHeaderEnter L624, M:OnBlockHeaderLeave L640, M:OnFreeBlock L651, M:QCObjectives L674, M:QCQuest L756, M:LayoutContents L871
+- **Public** L944: T.QuestOffset L950, T.IsDirty L958, T.MarkDirty L963, T.Update L974, T.Rebuild L1017, T.OnCombatEnded L1032, WantNativeHidden L1045, T.ApplyNativeVisibility L1049, T.Create L1082, container:IsCollapsed L1086, container:ForceExpand L1089, container:MarkDirty L1094
 
 ## Tracker/TrackerZones.lua (328 lines)
 
