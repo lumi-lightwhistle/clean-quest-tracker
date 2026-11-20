@@ -1,7 +1,8 @@
 -- Clean Quest Tracker: what each page of the settings window holds. Options.lua draws the window and the controls;
 -- this file only lists them. Each page is a name, a short note, and groups of rows: { label, side note, rows }.
--- A row's first entry picks the control (toggle, slider, choice, colour, presets, badges, button, inset); `k` is the
--- setting it changes and `hl` the part of the tracker shaded while it's hovered. Other row options:
+-- A row's first entry picks the control (toggle, slider, choice, colour, presets, badges, themes, button, inset,
+-- notice); `k` is the setting it changes and `hl` the part of the tracker shaded while it's hovered (the General
+-- page's rows shade nothing: they change the whole frame). Other row options:
 --   rebuild      redraw the whole list after a change (toggle, slider, choice)
 --   min max step format   a slider's range, step and how its value is written
 --   options      a choice's { value, label } pairs
@@ -10,9 +11,14 @@
 --   icon         a toggle's texture, drawn before its label
 --   kFn          a slider that edits one of two saved settings, chosen by a function (the quest indent)
 --   run, parts   a button's action; an inset's labels, bullets and text
+--   lead, text   a notice's opening words (pale blue) and the rest
 -- A row that only matters while another setting is set carries `enabledBy` (a saved switch that must be on),
 -- `disabledBy` (one that must be off) or `enabledWhen` (a function), plus `needs`, the line shown when it is hovered
 -- while greyed out. These apply to rows that are controls; buttons and notes ignore them.
+--
+-- A page with `sectionLinks` lists its named groups under its button in the side column, as links that jump to them
+-- (while the Show sections switch at the foot of that column is on; that switch is drawn in Options.lua, the one
+-- setting not listed here).
 --
 -- How the pages are split:
 --   General  the add-on itself and its window
@@ -50,12 +56,25 @@ local function IndentKey()
 	return IconsOn() and "poiIndent" or "indent"
 end
 
+local Framed = Q.Frame.Framed -- the padding and rounded corners need the background or the border on
+local LIMITS = Q.Frame.BACKDROP_LIMITS
+
+local function Rounded()
+	return Framed() and Q.db.rounded
+end
+
+local function Ornamented()
+	return Q.db.border and (Q.db.borderFlourish or Q.db.borderCrest)
+end
+
 local TARGET_ICON = "Interface\\AddOns\\CleanQuestTracker\\Media\\FocusTarget" -- the Quests bar's focus mode button
 
 local NEEDS_ZONES = "Turn on Group quests by zone (Quests page) to use this"
 local NEEDS_BARS = "Turn on Show progress bars (Quests page) to use this"
 local NEEDS_PARTY = "Turn on Show how many party members share each quest (Party page) to use this"
 local NEEDS_ICONS = "Turn on Show quest focus icons (Quests page) to use this"
+local NEEDS_FRAME = "Turn on Background or Border to use this"
+local NEEDS_BORDER = "Turn on Border to use this"
 
 local COLOUR_KEYS = { "colorZone", "colorCount", "colorTitle", "colorObjective", "colorDone", "colorBar", "colorBadge" }
 
@@ -63,28 +82,43 @@ O.PAGES = {
 	{
 		name = "General",
 		note = "The add-on and its window",
+		sectionLinks = true,
 		groups = {
 			{ "Quest list", nil, {
-				{ "toggle", k = "enabled", hl = "frame", label = "Enable Clean Quest Tracker", note = "Turn off to go back to Blizzard's tracker" },
-				{ "toggle", k = "hideBlizzard", hl = "hide", label = "Hide Blizzard's quest tracker", note = "Turn off to keep it too, for scenarios or tracked achievements" },
+				{ "toggle", k = "enabled", label = "Enable Clean Quest Tracker", note = "Turn off to go back to Blizzard's tracker" },
+				{ "toggle", k = "hideBlizzard", label = "Hide Blizzard's quest tracker", note = "Turn off to keep it too, for scenarios or tracked achievements" },
 			} },
-			{ "Window", "Size, position and backdrop", {
-				{ "toggle", k = "locked", hl = "lock", label = "Lock position and size", note = "Unlock to drag the top strip to move, and the corner grip to resize" },
-				{ "toggle", k = "alwaysShowIcons", hl = "head", label = "Always show header icons", note = "Off: the icons on the Quests bar fade in when you hover it" },
-				{ "toggle", k = "autoHeight", hl = "frame", label = "Auto height", note = "Grow to fit your quests, up to the maximum height" },
-				{ "slider", k = "scale", hl = "frame", label = "Scale", note = "Size of everything in the frame", min = 0.7, max = 1.6, step = 0.05, format = Decimal },
-				{ "slider", k = "width", hl = "w", label = "Width", note = "Long titles wrap to fit", min = 220, max = 700, step = 10 },
-				{ "slider", k = "maxHeight", hl = "frame", label = "Maximum height", note = "The list scrolls past this", min = 120, max = 1200, step = 10 },
-				{ "toggle", k = "backdrop", hl = "op", label = "Background", note = "A dark panel behind the list", onEnable = function()
-					Q.db.opacity = 0.5
+			{ "Window", "Size and position", {
+				{ "toggle", k = "locked", label = "Lock position and size", note = "Unlock to drag the top strip to move, and the corner grip to resize" },
+				{ "toggle", k = "alwaysShowIcons", label = "Always show header icons", note = "Off: the icons on the Quests bar fade in when you hover it" },
+				{ "toggle", k = "autoHeight", label = "Auto height", note = "Grow to fit your quests, up to the maximum height" },
+				{ "slider", k = "scale", label = "Scale", note = "Size of everything in the frame", min = 0.7, max = 1.6, step = 0.05, format = Decimal },
+				{ "slider", k = "width", label = "Width", note = "Long titles wrap to fit", min = 220, max = 700, step = 10 },
+				{ "slider", k = "maxHeight", label = "Maximum height", note = "The list scrolls past this", min = 120, max = 1200, step = 10 },
+			} },
+			{ "Background", nil, {
+				{ "toggle", k = "backdrop", label = "Background", note = "A dark panel behind the list", onEnable = function()
+					Q.db.opacity = Q.defaults.opacity
 				end },
-				{ "slider", k = "opacity", hl = "op", label = "Background darkness", note = "How dark the panel is", min = 0.05, max = 1, step = 0.05, format = Percent, enabledBy = "backdrop", needs = "Turn on Background to use this" },
+				{ "slider", k = "opacity", label = "Background darkness", note = "How dark the panel is", min = 0.05, max = 1, step = 0.05, format = Percent, enabledBy = "backdrop", needs = "Turn on Background to use this" },
+				{ "slider", k = "padding", label = "Padding", note = "Room between the list and the edge of the background or border", min = LIMITS.padding[1], max = LIMITS.padding[2], format = Pixels, enabledWhen = Framed, needs = NEEDS_FRAME },
+				{ "toggle", k = "rounded", label = "Rounded corners", note = "The border follows them", enabledWhen = Framed, needs = NEEDS_FRAME },
+				{ "slider", k = "cornerSize", label = "Corner size", note = "How round the corners are", min = LIMITS.cornerSize[1], max = LIMITS.cornerSize[2], format = Pixels, enabledWhen = Rounded, needs = "Turn on Rounded corners, and Background or Border, to use this" },
+			} },
+			{ "Border", "A bronze frame around the list", {
+				{ "toggle", k = "border", label = "Border", note = "Works with the background on or off" },
+				{ "choice", k = "borderWeight", label = "Line weight", note = "How thick the bronze line is", options = { { "fine", "Fine" }, { "standard", "Standard" }, { "heavy", "Heavy" } }, enabledBy = "border", needs = NEEDS_BORDER },
+				{ "choice", k = "borderFinish", label = "Finish", note = "Polished, aged or dark bronze", options = { { "polished", "Polished" }, { "aged", "Aged" }, { "dark", "Dark" } }, enabledBy = "border", needs = NEEDS_BORDER },
+				{ "toggle", k = "borderFlourish", label = "Corner flourishes", note = "Curls and leaves at each corner, reaching outward", enabledBy = "border", needs = NEEDS_BORDER },
+				{ "toggle", k = "borderCrest", label = "Crest on the header", note = "A small bronze diamond centred on the top edge", enabledBy = "border", needs = NEEDS_BORDER },
+				{ "slider", k = "flourishSize", label = "Flourish size", note = "Also sizes the crest", min = LIMITS.flourishSize[1], max = LIMITS.flourishSize[2], step = 0.05, format = Percent, enabledWhen = Ornamented, needs = "Turn on Border, and Corner flourishes or Crest on the header, to use this" },
 			} },
 		},
 	},
 	{
 		name = "Quests",
 		note = "What the tracker shows, and in what order",
+		sectionLinks = true,
 		groups = {
 			{ "Zones", nil, {
 				{ "toggle", k = "grouping", hl = "group", label = "Group quests by zone", note = "Click a zone heading to fold it" },
@@ -103,12 +137,14 @@ O.PAGES = {
 			} },
 			{ "Progress bars", nil, {
 				{ "toggle", k = "bars", hl = "bars", label = "Show progress bars", note = "A bar appears under an objective once it has some progress" },
+				{ "choice", k = "barStyle", hl = "bars", label = "Bar style", note = "Segmented: one segment per item needed, so 4/18 shows 18. Bars needing more than 30, or too narrow, stay smooth", options = { { "smooth", "Smooth" }, { "segmented", "Segmented" } }, enabledBy = "bars", needs = NEEDS_BARS },
 			} },
 		},
 	},
 	{
 		name = "Layout",
 		note = "Sizes and spacing",
+		sectionLinks = true,
 		groups = {
 			{ "Preset", "Sets the groups marked Preset below", {
 				{ "presets" },
@@ -134,6 +170,7 @@ O.PAGES = {
 	{
 		name = "Colours",
 		note = "Pick from a palette; the dot marks the default",
+		sectionLinks = true,
 		groups = {
 			{ "Text", nil, {
 				{ "colour", k = "colorZone", hl = "zfs", label = "Zone headings", note = "Zone names, their arrows and the line under them", enabledBy = "grouping", needs = NEEDS_ZONES },
@@ -212,7 +249,7 @@ O.PAGES = {
 					{ "bullet", "Zone arrows turn, and header icons fade in on hover" },
 					{ "bullet", "New quests fade in, and finished quests flare green (or, when sorted to the top or bottom, fold and glide there)" },
 					{ "label", "Always" },
-					{ "text", "Nothing animates during combat; the list snaps to its new layout instead. Progress bars always ease to their new value, even on None." },
+					{ "text", "Nothing animates during combat; the list snaps to its new layout instead. Progress bars always ease to their new value, and scrolling always glides, even on None (in combat the list can't scroll while a quest item button shows)." },
 				} },
 			} },
 		},
@@ -225,6 +262,10 @@ O.PAGES = {
 				{ "toggle", k = "superFocus", hl = "target", icon = TARGET_ICON, onEnable = function()
 					Q.db.focusQuest = false -- starts unlit each time, so the list never folds before the button is clicked
 				end, label = "Super focus mode", note = "Adds a target button to the Quests bar. Click it to turn focus mode on or off. While on, every quest except the one you focus (its round icon, or Focus in its right-click menu) folds down to its title" },
+			} },
+			{ "Experimental", "Try-outs", {
+				{ "notice", lead = "A playground for features that may come later.", text = "They may change, or go away, between versions." },
+				{ "themes", k = "bgTheme", label = "Themes", note = "Changes the tracker's background only", enabledBy = "backdrop", needs = "Turn on Background (General page) to use this" },
 			} },
 		},
 	},

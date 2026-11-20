@@ -5,20 +5,20 @@ Read this first, then open only the lines you need. `L123` is the line a section
 names with a dot or colon (`F.Layout`) are shared with other files, bare names are local to the file.
 Load order is the `.toc` order below.
 
-## Core/Core.lua (577 lines)
+## Core/Core.lua (598 lines)
 
 core namespace, saved settings, migration, compatibility and events. Design rule for the whole add-on: Blizzard's objective tracker is never modified. Clean Quest Tracker draws its own quest list from Blizzard's templates (Tracker.lua) inside its own frame...
 
-- **(top)** L1: Print L90, Q.Debounce L97, Q.Readable L109, Q.Fade L118, Q.HasAtlas L128, Q.Font L135, ParseHex L160, Q.Color L171, Motion.Duration L200, Motion.On L207, EaseOut L211, Motion.Tween L242, Motion.Target L257, Motion.Finish L263
-- **Compatibility: another add-on that replaces the quest tracker owns it. Clean Quest Tracker steps aside rather than fight.** L274: FindOwner L282, Q.Active L296
-- **Saved settings** L300: MigrateFrom05 L305, MigrateFrom06 L327, Migrate L350, LoadSettings L396, Q.ApplyPreset L438, Q.UpdatePresetName L451, Q.ResetSettings L469, Q.Apply L480, Q.Refresh L493, Q.SetLocked L499
-- **Startup** L507: Start L510
+- **(top)** L1: Print L103, Q.Debounce L110, Q.Readable L122, Q.Fade L131, Q.HasAtlas L141, Q.Font L148, ParseHex L173, Q.Color L184, Motion.Duration L216, Motion.On L223, EaseOut L227, Motion.Tween L258, Motion.Target L273, Motion.Stop L279, Motion.Finish L284
+- **Compatibility: another add-on that replaces the quest tracker owns it. Clean Quest Tracker steps aside rather than fight.** L295: FindOwner L303, Q.Active L317
+- **Saved settings** L321: MigrateFrom05 L326, MigrateFrom06 L348, Migrate L371, LoadSettings L417, Q.ApplyPreset L459, Q.UpdatePresetName L472, Q.ResetSettings L490, Q.Apply L501, Q.Refresh L514, Q.SetLocked L520
+- **Startup** L528: Start L531
 
-## Tracker/Progress.lua (140 lines)
+## Tracker/Progress.lua (194 lines)
 
-Thin rounded progress bars under counted objectives, with an eased fill animation when progress changes.
+Thin rounded progress bars under counted objectives, with an eased fill animation when progress changes. In the Segmented style (Quests page) a bar is cut into one segment per item the objective needs.
 
-- **(top)** L1: Q.CompleteColor L9, Pieces L13, Paint L23, Draw L49, Animate L60, Q.NewProgressBar L73, Q.SetBarInset L91, Q.SetBarProgress L98, Q.PreviewProgress L115
+- **(top)** L1: Q.CompleteColor L13, Pieces L17, Paint L27, SegmentCount L54, PaintSegments L67, Draw L92, Animate L112, Q.NewProgressBar L125, Q.SetBarInset L144, Q.SetBarProgress L151, Q.PreviewProgress L169
 
 ## Tracker/Party.lua (812 lines)
 
@@ -90,17 +90,27 @@ progress safety nets, so the list is always up to date.
 
 - **(top)** L1: T.Signature L9, T.StartWatching L51
 
-## UI/Frame.lua (789 lines)
+## UI/Frame.lua (791 lines)
 
 The tracker frame: header, scrolling quest area, auto height, and unlocked move/resize. Position is stored in UIParent units from the nearest top corner, so it survives UI scale and resolution changes. With auto height the frame grows to fit the quests up...
 
 - **(top)** L1: Clamp L31, Locked L36, F.ExtraRight L42, MinWidth L46, F.TooltipAnchor L50, F.IsExpanded L55, F.ViewBounds L59
 - **Position** L66: ApplyPosition L71, ConvertLegacyPosition L79, F.SavePosition L95
-- **Scrolling** L114: ScrollRange L117, ScrollTo L121, F.Scroll L135, UpdateScroll L141
-- **Height** L150: FinishRoll L156, SetHostHeight L167, F.Layout L187, F.SetContent L225, F.SetMinimized L232
-- **Header** L256: ShowControls L260, HeaderLeave L275, HeaderButton L281, F.HeaderButton L310, F.ShowControls L314, CreateHeader L318, lock.keepVisible L369, Grouped L375, focus.keepVisible L394, ExpandTip L399, FocusTip L423, target.available L435, target.keepVisible L438, F.SetHighlight L456, F.UpdateZoneTools L511, F.UpdateHeader L522
-- **Unlocked mode: move strip, resize grip, outline** L553: StopGestures L556, F.UpdateReadout L574, CreateUnlockControls L580, F.PlaceGrip L654
-- **Build and apply** L675: F.Create L678, F.Apply L754, F.OnCombatEnded L784
+- **Scrolling** L114: ScrollRange L117, ScrollTo L122, GlideStep L142, F.Scroll L146, UpdateScroll L158
+- **Height** L167: FinishRoll L173, SetHostHeight L184, F.Layout L204, F.SetContent L243, F.SetMinimized L250
+- **Header** L275: ShowControls L279, HeaderLeave L294, HeaderButton L300, F.HeaderButton L329, F.ShowControls L333, CreateHeader L337, lock.keepVisible L388, Grouped L394, focus.keepVisible L413, ExpandTip L418, FocusTip L442, target.available L454, target.keepVisible L457, F.SetHighlight L476, F.UpdateZoneTools L508, F.UpdateHeader L519
+- **Unlocked mode: move strip, resize grip, outline** L550: StopGestures L553, F.UpdateReadout L571, CreateUnlockControls L577, F.PlaceGrip L651
+- **Build and apply** L672: F.Create L675, F.Apply L756, F.OnCombatEnded L786
+
+## UI/FrameBorder.lua (504 lines)
+
+the frame's backdrop. The dark panel behind the list (square or with rounded corners, padded out from the list, plain or in a background theme), and the optional bronze border with its corner flourishes and the crest on the header. Everything here is drawn...
+
+- **(top)** L1: F.Framed L20
+- **The look: line weights, finishes and the layers of the line** L24: Hex L73, Byte L74, Layers L82
+- **Drawing helpers** L92: Place L106, HideAll L117, Mirror L127, SetRing L139, Shade L149, PanelColor L162, FillPanel L170, PaintExtras L180, StarsTexture L200, GlowTexture L209, Metal L219
+- **Building the pieces** L235: RingTexture L238, Plain L245, F.CreateBackdrop L251, PaintPanel L283, Run L319, PaintLine L349, PaintOrnaments L395, F.LayoutBackdrop L422, Setting L445, F.PaintBackdrop L452
+- **Theme samples for the settings window's cards** L489: F.ThemeSample L495
 
 ## UI/FrameSearch.lua (426 lines)
 
@@ -108,19 +118,19 @@ the search box in the Quests bar. A magnifying glass sits right of the zone tool
 
 - **(top)** L1: F.SearchOpen L43, Duration L47, Solid L51, LeftOffset L58, FullWidth L62, FadeTitle L67, SetWidth L74, SetBandAlpha L82, ShowBand L88, PaintLine L105, LayoutLine L113, Paint L122, F.CloseSearch L141, F.OpenSearch L161, F.PlaceSearch L181, F.SetSearchCount L202, F.ShowNoMatch L209, F.SearchRegion L233, WatchClicks L245, HeaderLeave L255, CreateClear L261, CreateEdit L296, F.CreateSearch L348, find.available L354
 
-## UI/Options.lua (1182 lines)
+## UI/Options.lua (1485 lines)
 
 Settings: Clean Quest Tracker's own window (/cqt, the header cog, or Esc > Options > AddOns) and slash commands. The window is drawn by the add-on itself in WoW Forever's modern style, the same palette EllesmereUI Forever uses: warm charcoal panels, thin...
 
-- **Drawing helpers** L51: Solid L54, Outline L65, Recolor L77, Round L84, Text L93, Hex L104
-- **Applying a change** L109: Changed L117, GroupLabel L132, List L153, CloseList L169, Row L176, row.Enter L191, row.Leave L196, PassHover L211, Labels L222, RowHeight L254
-- **Controls** L258: Toggle L263, Current L288, Flip L294, row:Refresh L313, StepButton L331, Slider L365, Key L385, Shown L390, Set L394, row:Refresh L449, Choice L461, row:Refresh L494, Colour L509, row:Refresh L562, Presets L585, Enter L591, Leave L594, row:Refresh L630, BadgeStyles L648, row.Enter L696, row.Leave L699, row:Refresh L702, Button L717, ActionButton L738, Inset L749, SpecEnabled L790, Gate L803, row:Refresh L827
-- **Window** L848: UpdateThumb L851, ShowPage L864, O.Refresh L887, BuildPage L896, Create L917, O.Toggle L1093
-- **Esc > Options > AddOns entry** L1105: RegisterWithSettings L1108
-- **Slash commands** L1143: SlashCmdList.CLEANQUESTTRACKER L1151
+- **Drawing helpers** L55: Solid L58, Outline L69, Recolor L81, Round L88, Text L97, Hex L108
+- **Applying a change** L113: Changed L121, GroupLabel L136, List L159, CloseList L175, Row L182, row.Enter L197, row.Leave L202, PassHover L217, Labels L228, RowHeight L260
+- **Controls** L264: Pill L270, switch:SetOn L286, Toggle L304, Current L312, Flip L318, row:Refresh L337, StepButton L343, Slider L377, Key L397, Shown L402, Set L406, row:Refresh L461, Choice L473, row:Refresh L506, Colour L521, row:Refresh L574, Presets L597, Enter L603, Leave L606, row:Refresh L642, BadgeStyles L660, row.Enter L708, row.Leave L711, row:Refresh L714, Button L729, ActionButton L750, Notice L764, Themes L795, row:Refresh L880, Inset L902, SpecEnabled L943, Gate L956, row:Refresh L980
+- **Window** L1003: UpdateSections L1011, UpdateThumb L1039, JumpTo L1054, LayoutNav L1064, ShowPage L1089, O.Refresh L1116, BuildPage L1125, SectionLinks L1148, ShowSectionsSwitch L1179, Flip L1195, row:Refresh L1201, Create L1210, O.Toggle L1396
+- **Esc > Options > AddOns entry** L1408: RegisterWithSettings L1411
+- **Slash commands** L1446: SlashCmdList.CLEANQUESTTRACKER L1454
 
-## UI/OptionsPages.lua (231 lines)
+## UI/OptionsPages.lua (272 lines)
 
 what each page of the settings window holds. Options.lua draws the window and the controls; this file only lists them. Each page is a name, a short note, and groups of rows: { label, side note, rows }. A row's first entry picks the control (toggle, slider,...
 
-- **(top)** L1: Decimal L27, Percent L31, Pixels L35, IconsOn L40, SetIcons L44, IndentKey L49
+- **(top)** L1: Decimal L33, Percent L37, Pixels L41, IconsOn L46, SetIcons L50, IndentKey L55, Rounded L62, Ornamented L66

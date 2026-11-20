@@ -28,7 +28,7 @@ STALE = {
 # Settings read only through a loop over the defaults, or stored for the add-on's own bookkeeping.
 INTERNAL_KEYS = {"point", "x", "y", "schema", "legacyPosition"}
 # Settings whose hover has nothing in the tracker to shade (they change behaviour, not a visible part), on purpose.
-NO_SHADE_KEYS = {"anim", "hide"}
+NO_SHADE_KEYS = {"anim"}
 
 
 def run(*args):

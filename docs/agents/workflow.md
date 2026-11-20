@@ -7,6 +7,7 @@
 - `repomap.py`: writes `docs/REPOMAP.md`; `--check` exits 1 if it is stale.
 - `commit_gate.py`: Claude Code hook that blocks `git commit` while `prereview.py` fails. Needs `python` on the path.
 - `img.py`, `badges.py`, `card_icons.py`, `make_icon.py`, `search_icon.py`: image drawing for `Media/` and `docs/`.
+- `border.py`: the bronze border's corner ring atlas, flourishes and crest, and the background themes' glow and stars (`python tools/border.py Media`).
 
 ## Branches, CI and merging
 - Every change: its own branch off fresh `origin/main` (`git fetch origin` first), its own PR.

@@ -19,8 +19,8 @@ local BRIGHT = { r = 1, g = 0.93, b = 0.55 }
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 local ICON_SIZE = 18 -- header icons share one size and centre line
 
-local host, header, scroll, content, slider, strip, grip, background
-local border = {}
+local host, header, scroll, content, slider, strip, grip
+local unlockEdges = {} -- the outline shown while unlocked
 local controls = {}
 local contentHeight, questCount = 0, 0
 local sizing, moving, syncing = false, false, false
@@ -118,7 +118,8 @@ local function ScrollRange()
 	return math.max(0, contentHeight + 8 - (scroll:GetHeight() or 0))
 end
 
-local function ScrollTo(value)
+-- `gliding`: a step of a wheel glide, which places the quest item buttons once at its end instead.
+local function ScrollTo(value, gliding)
 	if Locked() then
 		return
 	end
@@ -129,13 +130,29 @@ local function ScrollTo(value)
 		slider:SetValue(value)
 		syncing = false
 	end
-	Q.Debounce("placeItems", 0.05, Q.Tracker.PlaceItems)
+	if not gliding then
+		Q.Debounce("placeItems", 0.05, Q.Tracker.PlaceItems)
+	end
+end
+
+-- Each wheel notch glides 40px; notches that come quickly add up, so the glide heads for their combined target. While
+-- the list can't move (combat with an item button showing) the wheel does nothing, as before.
+local SCROLL_TWEEN = "qc-list-scroll"
+
+local function GlideStep(value)
+	ScrollTo(value, true)
 end
 
 function F.Scroll(delta)
-	if scroll then
-		ScrollTo(scroll:GetVerticalScroll() - delta * 40)
+	if not scroll or Locked() then
+		return
 	end
+	local range = ScrollRange()
+	local from = scroll:GetVerticalScroll()
+	-- A glide's target can lie past the end if the list got shorter meanwhile; start from inside the range.
+	local base = Clamp(Q.Motion.Target(SCROLL_TWEEN) or from, 0, range)
+	local target = Clamp(base - delta * 40, 0, range)
+	Q.Motion.Tween(SCROLL_TWEEN, from, target, Q.Motion.SCROLL, GlideStep, Q.Tracker.PlaceItems)
 end
 
 local function UpdateScroll()
@@ -197,6 +214,7 @@ function F.Layout()
 	local empty = not Q.Active() or (questCount == 0 and not F.SearchOpen())
 	if empty and db.locked then
 		Q.Motion.Finish(HEIGHT_TWEEN)
+		Q.Motion.Stop(SCROLL_TWEEN)
 		host:Hide()
 		return
 	end
@@ -230,6 +248,7 @@ end
 -- With motion, minimising fades the list while the frame rolls up under the header, and the tracker is told only
 -- once the roll ends; restoring rolls the frame back down while the list fades in.
 function F.SetMinimized(minimized)
+	Q.Motion.Stop(SCROLL_TWEEN)
 	Q.db.minimized = minimized and true or false
 	F.UpdateHeader()
 	local duration = Q.Motion.Duration()
@@ -450,8 +469,9 @@ local function CreateHeader()
 	ShowControls(false)
 end
 
--- Settings highlight for the parts of the frame itself: its heading, or the whole frame (size, lock, backdrop).
--- Keys with nothing to show here (Blizzard's tracker, animation speed) clear it.
+-- Settings highlight for the parts of the frame itself: the focus mode button or the search box. Other keys clear
+-- it. (The General page's window and backdrop settings shade nothing: they change the whole frame, which is plain
+-- to see.)
 local highlight
 function F.SetHighlight(key)
 	if not host then
@@ -462,33 +482,10 @@ function F.SetHighlight(key)
 		highlight:SetAllPoints()
 		highlight:SetFrameLevel(host:GetFrameLevel() + 60)
 		highlight.fill = highlight:CreateTexture(nil, "OVERLAY")
-		highlight.fill:SetColorTexture(1, 0.82, 0, 0.1)
-		highlight.edges = {}
-		for index = 1, 4 do
-			local edge = highlight:CreateTexture(nil, "OVERLAY")
-			edge:SetColorTexture(1, 0.82, 0, 0.9)
-			highlight.edges[index] = edge
-		end
-		local e = highlight.edges
-		e[1]:SetPoint("TOPLEFT", -3, 3) e[1]:SetPoint("TOPRIGHT", 3, 3) e[1]:SetHeight(2)
-		e[2]:SetPoint("BOTTOMLEFT", -3, -3) e[2]:SetPoint("BOTTOMRIGHT", 3, -3) e[2]:SetHeight(2)
-		e[3]:SetPoint("TOPLEFT", -3, 3) e[3]:SetPoint("BOTTOMLEFT", -3, -3) e[3]:SetWidth(2)
-		e[4]:SetPoint("TOPRIGHT", 3, 3) e[4]:SetPoint("BOTTOMRIGHT", 3, -3) e[4]:SetWidth(2)
-	end
-	local whole = key == "frame" or key == "w" or key == "op" or key == "lock"
-	for _, edge in ipairs(highlight.edges) do
-		edge:SetShown(whole)
+		highlight.fill:SetColorTexture(1, 0.82, 0, 0.3)
 	end
 	highlight.fill:ClearAllPoints()
-	highlight.fill:SetColorTexture(1, 0.82, 0, whole and 0.1 or 0.3)
-	if whole then
-		highlight.fill:SetAllPoints(host)
-		highlight.fill:Show()
-	elseif key == "head" then
-		highlight.fill:SetPoint("TOPLEFT", header.title, "TOPLEFT", -4, 3)
-		highlight.fill:SetPoint("BOTTOMRIGHT", header.title, "BOTTOMRIGHT", 4, -3)
-		highlight.fill:Show()
-	elseif key == "target" then
+	if key == "target" then
 		if header.target:IsShown() then
 			highlight.fill:SetPoint("TOPLEFT", header.target, "TOPLEFT", -3, 3)
 			highlight.fill:SetPoint("BOTTOMRIGHT", header.target, "BOTTOMRIGHT", 3, -3)
@@ -634,20 +631,20 @@ local function CreateUnlockControls()
 	for index = 1, 4 do
 		local edge = host:CreateTexture(nil, "OVERLAY")
 		edge:SetColorTexture(EDGE.r, EDGE.g, EDGE.b, 0.7)
-		border[index] = edge
+		unlockEdges[index] = edge
 	end
-	border[1]:SetPoint("TOPLEFT", -2, 2)
-	border[1]:SetPoint("TOPRIGHT", 2, 2)
-	border[1]:SetHeight(1)
-	border[2]:SetPoint("BOTTOMLEFT", -2, -2)
-	border[2]:SetPoint("BOTTOMRIGHT", 2, -2)
-	border[2]:SetHeight(1)
-	border[3]:SetPoint("TOPLEFT", -2, 2)
-	border[3]:SetPoint("BOTTOMLEFT", -2, -2)
-	border[3]:SetWidth(1)
-	border[4]:SetPoint("TOPRIGHT", 2, 2)
-	border[4]:SetPoint("BOTTOMRIGHT", 2, -2)
-	border[4]:SetWidth(1)
+	unlockEdges[1]:SetPoint("TOPLEFT", -2, 2)
+	unlockEdges[1]:SetPoint("TOPRIGHT", 2, 2)
+	unlockEdges[1]:SetHeight(1)
+	unlockEdges[2]:SetPoint("BOTTOMLEFT", -2, -2)
+	unlockEdges[2]:SetPoint("BOTTOMRIGHT", 2, -2)
+	unlockEdges[2]:SetHeight(1)
+	unlockEdges[3]:SetPoint("TOPLEFT", -2, 2)
+	unlockEdges[3]:SetPoint("BOTTOMLEFT", -2, -2)
+	unlockEdges[3]:SetWidth(1)
+	unlockEdges[4]:SetPoint("TOPRIGHT", 2, 2)
+	unlockEdges[4]:SetPoint("BOTTOMRIGHT", 2, -2)
+	unlockEdges[4]:SetWidth(1)
 end
 
 -- The grip sits on the corner away from the anchored side, so resizing grows the frame away from the screen edge.
@@ -688,8 +685,8 @@ function F.Create()
 	host:SetSize(Q.db.width, HEADER_HEIGHT)
 	F.host = host
 
-	background = host:CreateTexture(nil, "BACKGROUND", nil, -8)
-	background:SetAllPoints()
+	-- The dark panel, its corners and padding, and the bronze border (FrameBorder.lua).
+	F.CreateBackdrop(host)
 
 	CreateHeader()
 
@@ -729,6 +726,8 @@ function F.Create()
 	slider:SetValue(0)
 	slider:SetScript("OnValueChanged", function(_, value)
 		if not syncing then
+			-- Dragging the bar wins over a glide; so does a shorter list clamping the bar.
+			Q.Motion.Stop(SCROLL_TWEEN)
 			ScrollTo(value)
 		end
 	end)
@@ -739,7 +738,10 @@ function F.Create()
 	slider:Hide()
 
 	CreateUnlockControls()
-	host:SetScript("OnSizeChanged", F.UpdateReadout)
+	host:SetScript("OnSizeChanged", function()
+		F.UpdateReadout()
+		F.LayoutBackdrop()
+	end)
 
 	local combat = CreateFrame("Frame")
 	combat:RegisterEvent("PLAYER_REGEN_DISABLED")
@@ -770,10 +772,10 @@ function F.Apply()
 	-- The Background switch shows the dark panel at its chosen darkness; while unlocked it always shows, so the frame's
 	-- full size is visible while moving and resizing.
 	local darkness = db.backdrop and db.opacity or 0
-	background:SetColorTexture(0.03, 0.04, 0.06, unlocked and math.max(darkness, 0.35) or darkness)
+	F.PaintBackdrop(unlocked and math.max(darkness, 0.35) or darkness)
 	strip:SetShown(unlocked)
 	grip:SetShown(unlocked)
-	for _, edge in ipairs(border) do
+	for _, edge in ipairs(unlockEdges) do
 		edge:SetShown(unlocked)
 	end
 	F.PlaceGrip()

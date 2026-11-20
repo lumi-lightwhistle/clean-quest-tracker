@@ -42,6 +42,7 @@ Q.defaults = {
 	bars = true,
 	barHeight = 3,
 	barGap = 4, -- space between an objective and its progress bar (part of the preset)
+	barStyle = "smooth", -- "smooth" or "segmented" (one segment per item the objective needs; see Progress.lua)
 	-- motion: "off", "snappy" or "smooth"
 	animSpeed = "snappy",
 	-- frame
@@ -51,9 +52,20 @@ Q.defaults = {
 	scale = 1,
 	width = 320,
 	maxHeight = 520,
+	showSections = true, -- settings window: list the open page's sections under it in the side column
 	alwaysShowIcons = false, -- keep the Quests bar's icons on screen; off, they fade in when the mouse is over the bar
 	backdrop = false, -- dark panel behind the list
-	opacity = 0.5, -- its darkness, used while backdrop is on
+	opacity = 0.6, -- its darkness, used while backdrop is on
+	padding = 6, -- extra room between the list and the edge of the background or border (only while one shows)
+	rounded = true, -- round the background's corners (the border follows them)
+	cornerSize = 10, -- their radius (range in FrameBorder.lua, F.BACKDROP_LIMITS)
+	-- bronze border around the frame (UI/FrameBorder.lua)
+	border = false,
+	borderWeight = "fine", -- line weight: "fine", "standard" or "heavy"
+	borderFinish = "polished", -- "polished", "aged" or "dark"
+	borderFlourish = false, -- corner flourishes, while the border is on
+	flourishSize = 1, -- their size, and the crest's
+	borderCrest = false, -- a small crest centred on the top edge
 	-- colours (hex, without #); the defaults are the game's own tracker colours
 	colorZone = "d9b04a",
 	colorCount = "ede6d6", -- the number of quests at the right of a zone heading
@@ -70,6 +82,7 @@ Q.defaults = {
 	-- extras (optional; off until a player turns them on)
 	superFocus = false, -- show the focus mode target button in the Quests bar
 	focusQuest = false, -- the target button is lit (focus mode; only counts while superFocus is on)
+	bgTheme = "current", -- Experimental: the Background's theme, "current" (the plain panel) or "moonglow"
 	point = "TOPRIGHT",
 	x = -70,
 	y = -220,
@@ -189,12 +202,15 @@ end
 --
 -- Transitions only ever change how frames look on the way to their final state (alpha, rotation, a temporary
 -- translation, the host frame's height); the layout itself is always applied at once. They are skipped in combat, so
--- nothing moves while secure quest item buttons are locked in place.
+-- nothing moves while secure quest item buttons are locked in place. Scrolling is the exception: mouse-wheel scrolls
+-- always glide, at a fixed speed whatever the animation setting (the quest list itself still refuses to scroll in
+-- combat while an item button is on screen).
 ------------------------------------------------------------------------------------------------------------------------
 local Motion = {}
 Q.Motion = Motion
 
 Motion.SPEEDS = { off = 0, snappy = 0.15, smooth = 0.25 }
+Motion.SCROLL = 0.2 -- seconds for a scroll to glide to where the wheel (or a section link) sends it
 
 -- Seconds for one transition at the chosen speed; 0 means snap.
 function Motion.Duration()
@@ -257,6 +273,11 @@ end
 function Motion.Target(key)
 	local tween = tweens[key]
 	return tween and tween.to
+end
+
+-- Drops a tween where it is, without applying its end value.
+function Motion.Stop(key)
+	tweens[key] = nil
 end
 
 -- Ends a tween at once, at its end value.

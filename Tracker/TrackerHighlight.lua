@@ -155,8 +155,8 @@ function T.ApplyHighlight()
 	end)
 end
 
--- Shades the part of the list a setting changes, or clears it with nil. Keys the list doesn't own (the frame, its
--- heading) go to the frame.
+-- Shades the part of the list a setting changes, or clears it with nil. Keys the list doesn't own (the focus mode
+-- button, the search box) go to the frame.
 function T.SetHighlight(key)
 	highlightKey = key
 	T.ApplyHighlight()
