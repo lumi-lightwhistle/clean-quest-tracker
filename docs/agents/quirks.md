@@ -33,12 +33,16 @@ Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this i
 - **The `.toc` is the load order.** CI fails if a Lua file is missing from it or it lists one that doesn't exist.
 
 ## Textures and fonts
-- TGAs: 32-bit, stored bottom-up (descriptor 8), white with alpha so the game can tint them.
+- TGAs: 32-bit, stored bottom-up (descriptor 8), white with alpha so the game can tint them. Exception: the border
+  flourish and crest (`Media/BorderCorner*`, `BorderCrest*`) are coloured per finish by `tools/border.py`, since each
+  holds several colours (keep them in step with `FINISHES` in `UI/FrameBorder.lua`), and so are the Moonglow
+  stars (`BackdropStars`: two colours, so not tinted; tiled with REPEAT, so a power-of-two 128px).
 - Round shapes use circle masks or nine-slice. Overlapping see-through pieces stack visibly, so use solid premixed
   colours.
 - The game font (Friz) has no bold, and the OUTLINE flag adds a dark edge. Fake bold with a same-colour shadow
   offset by 1px.
-- `tools/img.py` is a pure-Python TGA/PNG writer (no PIL); `tools/badges.py` and `tools/card_icons.py` use it.
+- `tools/img.py` is a pure-Python TGA/PNG writer (no PIL); `tools/badges.py`, `tools/card_icons.py` and `tools/border.py`
+  use it.
 
 ## Look
 Modern WoW Forever: warm charcoal, bronze (accent #DCA77F), a little teal (the settings window's rim, and the lit

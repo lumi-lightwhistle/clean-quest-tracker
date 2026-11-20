@@ -5,6 +5,8 @@
 -- warm charcoal panels, thin bronze edges, a faint teal rim light and a bronze accent. Every page follows one pattern:
 -- small section labels, then rows of settings in a bordered list, each with a short note. Hovering over a row shades
 -- the part of the real tracker that setting changes (Tracker.SetHighlight).
+-- The side column lists the pages; under the open one, links to its sections jump the page to them (the Show
+-- sections switch at the column's foot turns them off).
 
 local _, Q = ...
 local O = {}
@@ -12,6 +14,8 @@ Q.Options = O
 
 local WIDTH, HEIGHT = 790, 640
 local SIDE_WIDTH, TOP_HEIGHT, FOOT_HEIGHT = 180, 56, 52
+local NAV_STEP, LINK_HEIGHT, PIN_HEIGHT = 36, 22, 40 -- side column: page buttons, section links, the switch at the foot
+local SCROLL_TWEEN = "qc-options-scroll"
 local PAD = 20
 local PAGE_WIDTH = WIDTH - SIDE_WIDTH - PAD * 2 - 10 -- 10 for the page scrollbar
 local CONTROL_WIDTH = 250
@@ -134,6 +138,8 @@ local function GroupLabel(page, title, side)
 		page.y = page.y - 18
 	end
 	if title and title ~= "" then
+		-- Where the section starts, for its link in the side column.
+		page.sections[#page.sections + 1] = { title = title, offset = -page.y }
 		local label = Text(page, "GameFontNormal", 11, LABEL)
 		label:SetPoint("TOPLEFT", 4, page.y)
 		label:SetText(title:upper())
@@ -259,29 +265,47 @@ end
 -- Controls
 ------------------------------------------------------------------------------------------------------------------------
 
+-- A pill switch `width` by `height` with its knob `inset` from the ends. The track is two round ends and a middle in
+-- solid colours (see TRACK_ON). Returns the button; switch:SetOn(on) paints it.
+local function Pill(parent, width, height, inset)
+	local switch = CreateFrame("Button", nil, parent)
+	switch:SetSize(width, height)
+	local parts = {}
+	for index, point in ipairs({ "LEFT", "RIGHT" }) do
+		parts[index] = Solid(switch, "ARTWORK", C.toggleOff)
+		parts[index]:SetSize(height, height)
+		parts[index]:SetPoint(point)
+		Round(parts[index], switch)
+	end
+	parts[3] = Solid(switch, "ARTWORK", C.toggleOff)
+	parts[3]:SetPoint("TOPLEFT", height / 2, 0)
+	parts[3]:SetPoint("BOTTOMRIGHT", -height / 2, 0)
+	local knob = Solid(switch, "OVERLAY", C.white)
+	knob:SetSize(height - 2 * inset, height - 2 * inset)
+	Round(knob, switch)
+	function switch:SetOn(on)
+		local color = on and TRACK_ON or TRACK_OFF
+		for _, part in ipairs(parts) do
+			part:SetColorTexture(color[1], color[2], color[3], 1)
+		end
+		knob:ClearAllPoints()
+		knob:SetPoint(on and "RIGHT" or "LEFT", on and -inset or inset, 0)
+		-- Off: a dimmed knob, also solid so it can't show the track through it.
+		if on then
+			knob:SetColorTexture(1, 1, 1, 1)
+		else
+			knob:SetColorTexture(0.6, 0.59, 0.585, 1)
+		end
+	end
+	return switch
+end
+
 -- Pill switch.
 local function Toggle(page, spec)
 	local row = Row(page, RowHeight(spec.note), spec.hl)
 	Labels(page, row, spec.label, spec.note, PAGE_WIDTH - 90, spec.icon)
-	local switch = CreateFrame("Button", nil, row)
-	switch:SetSize(38, 20)
+	local switch = Pill(row, 38, 20, 3)
 	switch:SetPoint("RIGHT", -14, 0)
-	local parts = {}
-	local left = Solid(switch, "ARTWORK", C.toggleOff)
-	left:SetSize(20, 20)
-	left:SetPoint("LEFT")
-	Round(left, switch)
-	local right = Solid(switch, "ARTWORK", C.toggleOff)
-	right:SetSize(20, 20)
-	right:SetPoint("RIGHT")
-	Round(right, switch)
-	local middle = Solid(switch, "ARTWORK", C.toggleOff)
-	middle:SetPoint("TOPLEFT", 10, 0)
-	middle:SetPoint("BOTTOMRIGHT", -10, 0)
-	parts[1], parts[2], parts[3] = left, right, middle
-	local knob = Solid(switch, "OVERLAY", C.white)
-	knob:SetSize(14, 14)
-	Round(knob, switch)
 	PassHover(row, switch)
 	-- A switch normally flips a saved setting (spec.k). One that mirrors something the add-on doesn't own, such as a game
 	-- setting, passes spec.get and spec.set instead.
@@ -311,19 +335,7 @@ local function Toggle(page, spec)
 	switch:SetScript("OnClick", Flip)
 	row:SetScript("OnClick", Flip)
 	function row:Refresh()
-		local on = Current()
-		local color = on and TRACK_ON or TRACK_OFF
-		for _, part in ipairs(parts) do
-			part:SetColorTexture(color[1], color[2], color[3], 1)
-		end
-		knob:ClearAllPoints()
-		knob:SetPoint(on and "RIGHT" or "LEFT", on and -3 or 3, 0)
-		-- Off: a dimmed knob, also solid so it can't show the track through it.
-		if on then
-			knob:SetColorTexture(1, 1, 1, 1)
-		else
-			knob:SetColorTexture(0.6, 0.59, 0.585, 1)
-		end
+		switch:SetOn(Current())
 	end
 	controls[#controls + 1] = row
 end
@@ -745,6 +757,147 @@ local function ActionButton(page, spec)
 	page.y = page.y - 38
 end
 
+-- A short tinted notice with a small moonlit diamond (the Experimental section's opening line): spec.lead in pale blue,
+-- then spec.text.
+local MOON = { 0.725, 0.812, 0.941 }
+
+local function Notice(page, spec)
+	local box = CreateFrame("Frame", nil, page)
+	box:SetPoint("TOPLEFT", 0, page.y)
+	box:SetWidth(PAGE_WIDTH)
+	local fill = box:CreateTexture(nil, "BACKGROUND")
+	fill:SetAllPoints()
+	Fade(fill, "HORIZONTAL", MOON, 0.07, 0.02)
+	Outline(box, MOON, 0.16)
+	local mark = Solid(box, "ARTWORK", MOON, 0.85)
+	mark:SetSize(7, 7)
+	mark:SetRotation(math.rad(45))
+	local line = Text(box, "GameFontHighlight", 12, NOTE)
+	line:SetWidth(PAGE_WIDTH - 60)
+	line:SetSpacing(2)
+	local hex = ("%02x%02x%02x"):format(math.floor(MOON[1] * 255 + 0.5), math.floor(MOON[2] * 255 + 0.5),
+		math.floor(MOON[3] * 255 + 0.5))
+	line:SetText(("|cff%s%s|r %s"):format(hex, spec.lead, spec.text))
+	line:SetPoint("TOPLEFT", 38, -11)
+	local height = math.ceil(line:GetStringHeight()) + 22
+	mark:SetPoint("CENTER", box, "TOPLEFT", 20, -height / 2)
+	box:SetHeight(height)
+	page.y = page.y - height - 10
+end
+
+-- Background themes: a card per theme, each showing that background behind a small sample of the tracker, drawn by
+-- FrameBorder.lua's F.ThemeSample at the default darkness.
+local THEME_CARDS = {
+	{ key = "current", name = "Current", note = "Today's dark panel" },
+	{ key = "moonglow", name = "Moonglow", note = "Night blue, moonlight and stars" },
+}
+
+local function Themes(page, spec)
+	local gap, art, caption = 12, 118, 44
+	local box = CreateFrame("Frame", nil, page)
+	box:SetPoint("TOPLEFT", 0, page.y)
+	box:SetSize(PAGE_WIDTH, 14 + 20 + 10 + art + caption + 14)
+	Solid(box, "BACKGROUND", C.black, 0.1):SetAllPoints()
+	Outline(box, C.white, 0.05)
+	local title = Text(box, "GameFontHighlight", 14, TEXT)
+	title:SetPoint("TOPLEFT", 24, -14)
+	title:SetText(spec.label)
+	local note = Text(box, "GameFontHighlightSmall", 11, NOTE)
+	note:SetPoint("TOPRIGHT", box, "TOPRIGHT", -14, -16)
+	note:SetJustifyH("RIGHT")
+	note:SetText(spec.note)
+	local width = (PAGE_WIDTH - 24 - 14 - gap) / 2
+	local cards = {}
+	for index, info in ipairs(THEME_CARDS) do
+		local card = CreateFrame("Button", nil, box)
+		card:SetSize(width, art + caption)
+		card:SetPoint("TOPLEFT", 24 + (index - 1) * (width + gap), -44)
+		Solid(card, "BACKGROUND", C.card):SetAllPoints()
+		card.edges = Outline(card, C.white, 0.12)
+		local stage = CreateFrame("Frame", nil, card)
+		stage:SetPoint("TOPLEFT", 6, -6)
+		stage:SetSize(width - 12, art - 6)
+		Q.Frame.ThemeSample(stage, info.key, width - 12, art - 6)
+		-- A few lines of the tracker in its own colours, which a theme never changes.
+		local lines = {
+			{ "Quests", 10, { 1, 0.82, 0 }, "CENTER" },
+			{ "Stranglethorn Vale", 10, { 0.851, 0.69, 0.29 } },
+			{ "[41] Venture Company Mining", 9, { 1, 0.82, 0 }, nil, 8 },
+			{ "- 7/10 Singing Blue Crystal", 9, { 0.8, 0.8, 0.8 }, nil, 14 },
+			{ "[37] Favor for Krazek", 9, { 1, 0.82, 0 }, nil, 8 },
+		}
+		local y = -10
+		for _, entry in ipairs(lines) do
+			local text = Text(stage, "GameFontHighlight", entry[2], 1, entry[3])
+			if entry[4] == "CENTER" then
+				text:SetPoint("TOP", stage, "TOP", 0, y)
+				local rule = Solid(stage, "ARTWORK", C.accent, 0.45)
+				rule:SetPoint("TOPLEFT", 12, y - 14)
+				rule:SetPoint("TOPRIGHT", -12, y - 14)
+				rule:SetHeight(1)
+				y = y - 20
+			else
+				text:SetPoint("TOPLEFT", 12 + (entry[5] or 0), y)
+				y = y - 15
+			end
+		end
+		card.name = Text(card, "GameFontHighlight", 14, TEXT)
+		card.name:SetPoint("TOPLEFT", stage, "BOTTOMLEFT", 4, -8)
+		card.name:SetText(info.name)
+		card.note = Text(card, "GameFontHighlightSmall", 11, NOTE)
+		card.note:SetPoint("TOPLEFT", card.name, "BOTTOMLEFT", 0, -3)
+		card.note:SetText(info.note)
+		-- The chosen card's dot fills in.
+		card.ring = Solid(card, "ARTWORK", C.white, 0.3)
+		card.ring:SetSize(12, 12)
+		card.ring:SetPoint("BOTTOMRIGHT", -12, 16)
+		Round(card.ring, card)
+		card.hole = Solid(card, "ARTWORK", C.card, 1, 1)
+		card.hole:SetSize(10, 10)
+		card.hole:SetPoint("CENTER", card.ring)
+		Round(card.hole, card)
+		card.dot = Solid(card, "ARTWORK", C.accent, 1, 2)
+		card.dot:SetSize(6, 6)
+		card.dot:SetPoint("CENTER", card.ring)
+		Round(card.dot, card)
+		card:SetScript("OnClick", function()
+			Q.db[spec.k] = info.key
+			Changed(spec.k)
+		end)
+		card:SetScript("OnEnter", function()
+			if Q.db[spec.k] ~= info.key then
+				Recolor(card.edges, C.white, 0.28)
+			end
+		end)
+		card:SetScript("OnLeave", function()
+			O.Refresh()
+		end)
+		card.key = info.key
+		cards[index] = card
+	end
+	page.y = page.y - box:GetHeight()
+	local row = { hover = box }
+	function row:Refresh()
+		local chosen = Q.db[spec.k]
+		if not Q.Frame.THEMES[chosen] then
+			chosen = Q.defaults[spec.k]
+		end
+		for _, card in ipairs(cards) do
+			local selected = chosen == card.key
+			Recolor(card.edges, selected and C.accent or C.white, selected and 0.75 or 0.12)
+			if selected then
+				card.name:SetTextColor(C.accent[1], C.accent[2], C.accent[3], 1)
+				card.ring:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 1)
+			else
+				card.name:SetTextColor(1, 1, 1, TEXT)
+				card.ring:SetColorTexture(1, 1, 1, 0.3)
+			end
+			card.dot:SetShown(selected)
+		end
+	end
+	controls[#controls + 1] = row
+end
+
 -- A boxed explanation: small labels, bullet points and paragraphs.
 local function Inset(page, spec)
 	local box = CreateFrame("Frame", nil, page)
@@ -843,12 +996,48 @@ local BUILD = {
 	badges = BadgeStyles,
 	button = ActionButton,
 	inset = Inset,
+	notice = Notice,
+	themes = Themes,
 }
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Window
 ------------------------------------------------------------------------------------------------------------------------
+-- The section links under the open page: the lit one is the last section whose heading is at or above the top of the
+-- view (the last section once the page is scrolled to its end).
+-- A section near the end of a page can't reach the top of the view, so the link last clicked stays lit until the page
+-- is scrolled by hand.
+local jumpedTo
+local function UpdateSections()
+	local button = navButtons[current]
+	local links = button and button.links
+	if not links or not Q.db.showSections then
+		return
+	end
+	local top, range = scroll:GetVerticalScroll(), scroll:GetVerticalScrollRange()
+	local lit = 1
+	for index, link in ipairs(links) do
+		if link.offset <= top + 8 then
+			lit = index
+		end
+	end
+	if range > 1 and top >= range - 2 then
+		lit = #links
+	end
+	lit = jumpedTo or lit
+	for index, link in ipairs(links) do
+		local on = index == lit
+		link.tick:SetShown(on)
+		if on then
+			link.label:SetTextColor(C.accent[1], C.accent[2], C.accent[3], 1)
+		else
+			link.label:SetTextColor(1, 1, 1, NOTE)
+		end
+	end
+end
+
 local function UpdateThumb()
+	UpdateSections()
 	local range = scroll:GetVerticalScrollRange()
 	thumb:SetShown(range > 1)
 	if range <= 1 then
@@ -861,13 +1050,53 @@ local function UpdateThumb()
 	thumb:SetPoint("TOPRIGHT", scroll, "TOPRIGHT", 8, -(view - size) * (scroll:GetVerticalScroll() / range))
 end
 
+-- Scrolls the page so a section's heading sits at the top, gliding there like a wheel scroll.
+local function JumpTo(offset)
+	local target = math.min(scroll:GetVerticalScrollRange(), offset)
+	Q.Motion.Tween(SCROLL_TWEEN, scroll:GetVerticalScroll(), target, Q.Motion.SCROLL, function(value)
+		scroll:SetVerticalScroll(value)
+		UpdateThumb()
+	end)
+end
+
+-- Stacks the page buttons down the side column, with the open page's section links (while Show sections is on)
+-- between its button and the next.
+local function LayoutNav()
+	local y = -TOP_HEIGHT - 12
+	for index, button in ipairs(navButtons) do
+		button:ClearAllPoints()
+		button:SetPoint("TOPLEFT", 0, y)
+		y = y - NAV_STEP
+		local links = button.links
+		if links then
+			local open = Q.db.showSections and index == current
+			links.guide:SetShown(open)
+			for _, link in ipairs(links) do
+				link:SetShown(open)
+				if open then
+					link:ClearAllPoints()
+					link:SetPoint("TOPLEFT", 0, y)
+					y = y - LINK_HEIGHT
+				end
+			end
+			if open then
+				y = y - 8
+			end
+		end
+	end
+end
+
 local function ShowPage(index)
 	current = index
+	Q.Motion.Stop(SCROLL_TWEEN) -- a jump still easing on the page before
+	jumpedTo = nil
+	LayoutNav()
 	for pageIndex, page in ipairs(pages) do
 		page:SetShown(pageIndex == index)
 	end
 	child:SetHeight(pages[index].height)
 	scroll:SetVerticalScroll(0)
+	UpdateSections()
 	pageTitle:SetText(O.PAGES[index].name)
 	pageNote:SetText(O.PAGES[index].note or "")
 	for buttonIndex, button in ipairs(navButtons) do
@@ -898,6 +1127,7 @@ local function BuildPage(index, info)
 	page:SetPoint("TOPLEFT")
 	page:SetSize(PAGE_WIDTH, 10)
 	page.y = 0
+	page.sections = {}
 	for _, group in ipairs(info.groups) do
 		GroupLabel(page, group[1], group[2])
 		for _, spec in ipairs(group[3]) do
@@ -912,6 +1142,69 @@ local function BuildPage(index, info)
 	page.height = -page.y + 12
 	page:SetHeight(page.height)
 	pages[index] = page
+end
+
+-- Indented links to a page's sections, on a faint bronze guide line; the lit one gets a tick on the line.
+local function SectionLinks(side, sections)
+	local links = {}
+	for index, section in ipairs(sections) do
+		local link = CreateFrame("Button", nil, side)
+		link:SetSize(SIDE_WIDTH - 1, LINK_HEIGHT)
+		Solid(link, "HIGHLIGHT", C.white, 0.04):SetAllPoints()
+		link.label = Text(link, "GameFontHighlight", 12, NOTE)
+		link.label:SetPoint("LEFT", 34, 0)
+		link.label:SetWidth(SIDE_WIDTH - 1 - 34 - 8)
+		link.label:SetWordWrap(false)
+		link.label:SetText(section.title)
+		link.tick = Solid(link, "ARTWORK", C.accent)
+		link.tick:SetSize(3, LINK_HEIGHT - 10)
+		link.tick:SetPoint("LEFT", 23, 0)
+		link.offset = section.offset
+		link:SetScript("OnClick", function()
+			jumpedTo = index
+			JumpTo(section.offset)
+		end)
+		link:Hide()
+		links[index] = link
+	end
+	links.guide = Solid(side, "BORDER", C.accent, 0.18)
+	links.guide:SetWidth(1)
+	links.guide:SetPoint("TOPLEFT", links[1], "TOPLEFT", 24, -2)
+	links.guide:SetPoint("BOTTOMLEFT", links[#links], "BOTTOMLEFT", 24, 2)
+	links.guide:Hide()
+	return links
+end
+
+-- Show sections: a small switch pinned to the foot of the side column (the saved setting showSections).
+local function ShowSectionsSwitch(side)
+	local row = CreateFrame("Button", nil, side)
+	row:SetPoint("BOTTOMLEFT")
+	row:SetPoint("BOTTOMRIGHT", -1, 0)
+	row:SetHeight(PIN_HEIGHT)
+	local rule = Solid(row, "BORDER", C.accent, 0.14)
+	rule:SetPoint("TOPLEFT")
+	rule:SetPoint("TOPRIGHT")
+	rule:SetHeight(1)
+	Solid(row, "HIGHLIGHT", C.white, 0.04):SetAllPoints()
+	local label = Text(row, "GameFontHighlight", 12, NOTE)
+	label:SetPoint("LEFT", 18, 0)
+	label:SetText("Show sections")
+	-- The same switch as the settings rows, smaller.
+	local switch = Pill(row, 30, 16, 2)
+	switch:SetPoint("RIGHT", -12, 0)
+	local function Flip()
+		Q.db.showSections = not Q.db.showSections
+		row:Refresh()
+	end
+	row:SetScript("OnClick", Flip)
+	switch:SetScript("OnClick", Flip)
+	function row:Refresh()
+		switch:SetOn(Q.db.showSections and true or false)
+		LayoutNav()
+		UpdateSections()
+	end
+	-- Refreshed with the settings rows, so Reset to defaults puts it back too.
+	controls[#controls + 1] = row
 end
 
 local function Create()
@@ -1023,10 +1316,16 @@ local function Create()
 	child:SetSize(PAGE_WIDTH, 10)
 	scroll:SetScrollChild(child)
 	scroll:EnableMouseWheel(true)
+	-- Each notch glides 44px; notches that come quickly add up. The wheel takes over from a section jump still gliding.
 	scroll:SetScript("OnMouseWheel", function(self, delta)
-		local target = self:GetVerticalScroll() - delta * 44
-		self:SetVerticalScroll(math.max(0, math.min(self:GetVerticalScrollRange(), target)))
-		UpdateThumb()
+		local from, range = self:GetVerticalScroll(), self:GetVerticalScrollRange()
+		local base = math.max(0, math.min(range, Q.Motion.Target(SCROLL_TWEEN) or from))
+		local target = math.max(0, math.min(range, base - delta * 44))
+		jumpedTo = nil
+		Q.Motion.Tween(SCROLL_TWEEN, from, target, Q.Motion.SCROLL, function(value)
+			self:SetVerticalScroll(value)
+			UpdateThumb()
+		end)
 	end)
 	thumb = Solid(panel, "ARTWORK", C.accent, 0.7)
 	thumb:SetWidth(3)
@@ -1035,7 +1334,6 @@ local function Create()
 	for index, info in ipairs(O.PAGES) do
 		local button = CreateFrame("Button", nil, side)
 		button:SetSize(SIDE_WIDTH - 1, 34)
-		button:SetPoint("TOPLEFT", 0, -TOP_HEIGHT - 12 - (index - 1) * 36)
 		button.fill = button:CreateTexture(nil, "BACKGROUND", nil, 2)
 		button.fill:SetAllPoints()
 		Fade(button.fill, "HORIZONTAL", C.accent, 0.16, 0)
@@ -1052,7 +1350,11 @@ local function Create()
 		end)
 		navButtons[index] = button
 		BuildPage(index, info)
+		if info.sectionLinks and #pages[index].sections > 1 then
+			button.links = SectionLinks(side, pages[index].sections)
+		end
 	end
+	ShowSectionsSwitch(side)
 
 	-- Footer.
 	local foot = CreateFrame("Frame", nil, panel)
@@ -1077,6 +1379,7 @@ local function Create()
 
 	panel:SetScript("OnShow", O.Refresh)
 	panel:SetScript("OnHide", function()
+		Q.Motion.Stop(SCROLL_TWEEN)
 		-- A row under the mouse gets no OnLeave when the window closes; clear its shading and the tracker's.
 		for _, control in ipairs(controls) do
 			if control.tint then

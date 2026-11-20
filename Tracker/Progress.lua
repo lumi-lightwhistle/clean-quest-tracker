@@ -1,9 +1,13 @@
--- Thin rounded progress bars under counted objectives, with an eased fill animation when progress changes.
+-- Thin rounded progress bars under counted objectives, with an eased fill animation when progress changes. In the
+-- Segmented style (Quests page) a bar is cut into one segment per item the objective needs.
 
 local _, Q = ...
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\Bar"
 local DURATION = 0.32
 local TRACK = { r = 0.08, g = 0.12, b = 0.17, a = 0.8 }
+local SEGMENTS_MAX = 30 -- objectives needing more items than this keep a smooth bar
+local SEGMENT_MIN = 4 -- nor is a bar cut so fine that a segment and its gap are under this many pixels wide
+local GAP_MAX = 3 -- the gap between segments: 3 pixels, or a fifth of each item's share of the bar if less (at least 1)
 
 -- Finished quests and full bars: the Finished quests colour from the Colours page (the game's green by default).
 function Q.CompleteColor()
@@ -46,15 +50,63 @@ local function Paint(pieces, width, height, r, g, b, a)
 	end
 end
 
+-- How many segments the bar is cut into, or nil to draw it smooth.
+local function SegmentCount(bar, width)
+	local total = bar.total
+	if Q.db.barStyle ~= "segmented" or not total or total < 2 or total > SEGMENTS_MAX then
+		return nil
+	end
+	if width / total < SEGMENT_MIN then -- leaves each segment at least 3 pixels after its gap
+		return nil
+	end
+	return total
+end
+
+-- Paints `count` segments across `width`, `filled` (0 to 1) of the way; the one the fill ends in is drawn part way.
+-- Segments are made as needed and kept with the bar.
+local function PaintSegments(bar, list, layer, count, width, height, filled, r, g, b, a)
+	for index = #list + 1, count do
+		list[index] = bar.inner:CreateTexture(nil, layer)
+		list[index]:SetTexture(MEDIA .. "Middle")
+	end
+	-- Whole-unit gaps and edges, so every gap comes out the same width.
+	local gap = count > 0 and math.max(1, math.floor(math.min(GAP_MAX, width / count * 0.2))) or 0
+	local step = count > 0 and (width + gap) / count or 0
+	for index, texture in ipairs(list) do
+		local left = math.floor((index - 1) * step + 0.5)
+		local right = math.min(math.floor(index * step - gap + 0.5), width)
+		local part = math.max(0, math.min(1, filled * count - (index - 1)))
+		local shown = index <= count and (right - left) * part or 0
+		if shown > 0.05 then
+			texture:ClearAllPoints()
+			texture:SetPoint("TOPLEFT", left, 0)
+			texture:SetSize(shown, height)
+			texture:SetVertexColor(r, g, b, a or 1)
+			texture:Show()
+		else
+			texture:Hide()
+		end
+	end
+end
+
 local function Draw(bar)
 	local inner = bar.inner
 	local width, height = inner:GetWidth(), inner:GetHeight()
 	if not width or width <= 0 then
 		return
 	end
-	Paint(bar.track, width, height, TRACK.r, TRACK.g, TRACK.b, TRACK.a)
 	local color = bar.complete and Q.CompleteColor() or Q.Color("colorBar")
-	Paint(bar.fill, width * (bar.display or 0), height, color.r, color.g, color.b)
+	local display = bar.display or 0
+	local count = SegmentCount(bar, width) or 0
+	PaintSegments(bar, bar.trackSegments, "BACKGROUND", count, width, height, 1, TRACK.r, TRACK.g, TRACK.b, TRACK.a)
+	PaintSegments(bar, bar.fillSegments, "ARTWORK", count, width, height, display, color.r, color.g, color.b)
+	if count > 0 then
+		Paint(bar.track, 0, height)
+		Paint(bar.fill, 0, height)
+		return
+	end
+	Paint(bar.track, width, height, TRACK.r, TRACK.g, TRACK.b, TRACK.a)
+	Paint(bar.fill, width * display, height, color.r, color.g, color.b)
 end
 
 local function Animate(bar, elapsed)
@@ -76,6 +128,7 @@ function Q.NewProgressBar(parent)
 	bar.inner:SetAllPoints()
 	bar.track = Pieces(bar.inner, "BACKGROUND")
 	bar.fill = Pieces(bar.inner, "ARTWORK")
+	bar.trackSegments, bar.fillSegments = {}, {}
 	bar.inner:SetScript("OnSizeChanged", function()
 		Draw(bar)
 	end)
@@ -103,6 +156,7 @@ function Q.SetBarProgress(bar, key, count, total, complete)
 		bar.start, bar.target, bar.elapsed = bar.display, target, 0
 	end
 	bar.complete = complete
+	bar.total = total
 	Draw(bar)
 	if bar.display ~= bar.target then
 		bar:SetScript("OnUpdate", Animate)

@@ -10,7 +10,7 @@ The repository root is the add-on folder. `CleanQuestTracker.toc` lists the load
 |---|---|
 | `Core/` | Settings, defaults, presets, migrations and events |
 | `Tracker/` | The quest list and its parts: zones, pools, quest items, motion, search, progress bars and party detection |
-| `UI/` | The tracker frame, the search box and the settings window |
+| `UI/` | The tracker frame (with its background and bronze border), the search box and the settings window |
 | `Media/` | Textures |
 | `tools/` | Dev scripts (not shipped) |
 | `docs/` | The CurseForge page text, its icons, and the screenshots the README and CurseForge page use (not shipped) |

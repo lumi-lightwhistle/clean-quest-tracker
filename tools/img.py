@@ -1,5 +1,6 @@
 """Tiny pure-Python image helpers: read/write 32-bit TGA, write PNG, and draw anti-aliased shapes from distance
-functions. Add-on textures are white with alpha, as the add-on tints them in game; card_icons.py also writes colour PNGs."""
+functions. Most add-on textures are white with alpha so the add-on can tint them; write_tga_rgba writes coloured ones
+(border.py's flourish, crest and stars), and card_icons.py writes colour PNGs."""
 import math
 import struct
 import zlib
@@ -23,15 +24,8 @@ def read_tga(path):
 
 
 def write_tga(path, alpha):
-    h, w = len(alpha), len(alpha[0])
-    # Bottom-up rows (descriptor 8), the same layout as the add-on's existing icons.
-    header = struct.pack("<BBBHHBHHHHBB", 0, 0, 2, 0, 0, 0, 0, 0, w, h, 32, 8)
-    body = bytearray()
-    for y in range(h - 1, -1, -1):
-        for x in range(w):
-            a = max(0, min(255, int(round(alpha[y][x] * 255))))
-            body += bytes((255, 255, 255, a))
-    open(path, "wb").write(header + bytes(body))
+    """White TGA with the given alpha rows (0..1), for the game to tint."""
+    write_tga_rgba(path, [[(1, 1, 1, a) for a in row] for row in alpha])
 
 
 def write_png(path, rgba_rows):
@@ -78,3 +72,19 @@ def polyline(points, width):
                 return True
         return False
     return inside
+
+
+def write_tga_rgba(path, rows):
+    """Colour TGA from rows of (r, g, b, a) floats 0..1, straight (not premultiplied) alpha. For art that is drawn in
+    its own colours rather than tinted in game, such as the border flourishes."""
+    h, w = len(rows), len(rows[0])
+    # Bottom-up rows (descriptor 8), the same layout as the add-on's existing icons.
+    header = struct.pack("<BBBHHBHHHHBB", 0, 0, 2, 0, 0, 0, 0, 0, w, h, 32, 8)
+    body = bytearray()
+
+    def byte(v):
+        return max(0, min(255, int(round(v * 255))))
+    for y in range(h - 1, -1, -1):
+        for r, g, b, a in rows[y]:
+            body += bytes((byte(b), byte(g), byte(r), byte(a)))
+    open(path, "wb").write(header + bytes(body))

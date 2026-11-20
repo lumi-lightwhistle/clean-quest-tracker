@@ -86,7 +86,7 @@ Bars fill as you collect items and defeat enemies. Finished quests turn green an
 &nbsp;<br>
 **Yours to arrange**
 
-Comfortable or Compact spacing, your own colours, six party badge styles and an optional dark panel. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.<br>
+Comfortable or Compact spacing, your own colours, six party badge styles, an optional dark panel with padding and rounded corners, and a bronze border with corner flourishes and a crest. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.<br>
 &nbsp;
 
 </td>
@@ -114,7 +114,7 @@ Quest item buttons, map pins and the right-click menu work as they do in Blizzar
 
 <img src="docs/screenshots/19-header-icons.png" width="300" alt="The Quests bar with its zone tools, search, cog, lock and minimise buttons." align="right">
 
-Hover the tracker's header and click the **cog**, or type `/cqt`, to open settings. Hover any setting to see the part of the tracker it changes, shaded in gold. Settings that don't apply right now are greyed out and say why.
+Hover the tracker's header and click the **cog**, or type `/cqt`, to open settings. Hover a setting to see the part of the list it changes, shaded in gold. Settings that don't apply right now are greyed out and say why.
 
 Shift-click a quest to link it in chat. Right-click it for the quest menu, including Stop tracking.
 

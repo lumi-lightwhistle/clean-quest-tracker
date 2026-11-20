@@ -43,7 +43,8 @@ Read this whole file; it is short on purpose. Detail lives in `docs/agents/`, op
   window); textures in `Media/`. Files share state through namespaces on the add-on table: `Q`, `Q.Tracker` (T),
   `F`, `P`, `O`. Settings live in `Q.db`, defaults in `Q.defaults`.
 - Settings window: `UI/Options.lua` draws it, `UI/OptionsPages.lua` lists what each page holds. Add or move a setting
-  in the pages file; a setting with no control or no reader fails `prereview.py`.
+  in the pages file (the side column's Show sections switch is the one exception, drawn in `Options.lua`); a setting
+  with no control or no reader fails `prereview.py`.
 - Everything else (files, functions, line numbers): `docs/REPOMAP.md`.
 
 ## Open when needed

@@ -24,6 +24,7 @@ Tracker\TrackerHighlight.lua
 Tracker\TrackerSearch.lua
 Tracker\TrackerWatch.lua
 UI\Frame.lua
+UI\FrameBorder.lua
 UI\FrameSearch.lua
 UI\Options.lua
 UI\OptionsPages.lua
