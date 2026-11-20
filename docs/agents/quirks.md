@@ -11,7 +11,8 @@ Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this i
   that reads the icon size. Icons on: quest indent is `poiIndent` (list's left edge to the icon). Off: `indent`
   (from the zone name).
 - **Quest item buttons are secure.** No layout moves while they are on screen in combat; catch up on
-  `PLAYER_REGEN_ENABLED`.
+  `PLAYER_REGEN_ENABLED`. They must be registered for both `AnyUp` and `AnyDown`: the client fires a secure action
+  on whichever half the `ActionButtonUseKeyDown` CVar picks (down by default), so `AnyUp` alone does nothing.
 - **Scale animations stretch on a moving row.** Blizzard's check-mark flash on an objective line scales the check and
   a glow; if the row moves while it plays, the game draws them stretched and oversized. So a quest that moves as it
   completes (finished quests sorted to the top or bottom) folds to its title at once and only glides (`moves` in

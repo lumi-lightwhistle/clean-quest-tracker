@@ -128,7 +128,9 @@ end
 local function CreateItem()
 	local button = CreateFrame("Button", nil, Holder(), "SecureActionButtonTemplate")
 	button:SetSize(T.ITEM_SIZE, T.ITEM_SIZE)
-	button:RegisterForClicks("AnyUp")
+	-- A secure button acts on the down or the up half of a click, whichever the ActionButtonUseKeyDown CVar picks
+	-- (down by default). Registering only one half makes clicks do nothing for most players, so take both.
+	button:RegisterForClicks("AnyUp", "AnyDown")
 	button:SetAttribute("type", "item")
 
 	local icon = button:CreateTexture(nil, "BORDER")

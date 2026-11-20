@@ -53,12 +53,12 @@ private frame pools for the quest list (see Tracker.lua).
 
 - **(top)** L1: Pools.Acquire L18, Pools.Release L35, BlockGetLine L40, BlockFreeLine L59, PoiScale L75, BlockGetPOIButton L79, FirstLineHeight L99, BlockAddPOIButton L111, BlockReleasePOIButton L128, T.PatchBlock L137
 
-## Tracker/TrackerItems.lua (241 lines)
+## Tracker/TrackerItems.lua (243 lines)
 
 secure quest item buttons beside quests that have a usable item.
 
 - **(top)** L1: Holder L13, T.QuestShowsItem L23
-- **Secure quest item buttons** L34: Item:UpdateCooldown L39, Item:SetUp L54, Item:OnUpdate L69, Item:OnEvent L99, Item:OnShow L107, Item:OnHide L112, Item:OnEnter L117, Item.OnLeave L124, CreateItem L128, T.ItemsInUse L179, T.ItemCount L183, T.DimItems L188, T.ReleaseItems L194, T.PlaceItems L211
+- **Secure quest item buttons** L34: Item:UpdateCooldown L39, Item:SetUp L54, Item:OnUpdate L69, Item:OnEvent L99, Item:OnShow L107, Item:OnHide L112, Item:OnEnter L117, Item.OnLeave L124, CreateItem L128, T.ItemsInUse L181, T.ItemCount L185, T.DimItems L190, T.ReleaseItems L196, T.PlaceItems L213
 
 ## Tracker/TrackerSpoken.lua (74 lines)
 
