@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.8](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.7...v0.8.8) (2026-11-20)
+
+
+### ✨ New
+
+* New Experimental section on the Extras page, with a Moonglow background theme ([542c4e3](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/542c4e35b166b57c251aa2bdb92b8caa5f3c127a))
+* Optional bronze border around the tracker, with line weight, finish, corner flourishes and a crest to choose ([542c4e3](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/542c4e35b166b57c251aa2bdb92b8caa5f3c127a))
+* Progress bars can be segmented, one segment per item needed ([542c4e3](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/542c4e35b166b57c251aa2bdb92b8caa5f3c127a))
+* Rounded corners and padding for the background ([542c4e3](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/542c4e35b166b57c251aa2bdb92b8caa5f3c127a))
+* Scrolling glides smoothly in the tracker and the settings window ([542c4e3](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/542c4e35b166b57c251aa2bdb92b8caa5f3c127a))
+* Section links in the settings window jump straight to each part of a page ([542c4e3](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/542c4e35b166b57c251aa2bdb92b8caa5f3c127a))
+
 ## [0.8.7](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.6...v0.8.7) (2026-11-19)
 
 
