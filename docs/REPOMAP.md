@@ -5,14 +5,14 @@ Read this first, then open only the lines you need. `L123` is the line a section
 names with a dot or colon (`F.Layout`) are shared with other files, bare names are local to the file.
 Load order is the `.toc` order below.
 
-## Core/Core.lua (598 lines)
+## Core/Core.lua (611 lines)
 
 core namespace, saved settings, migration, compatibility and events. Design rule for the whole add-on: Blizzard's objective tracker is never modified. Clean Quest Tracker draws its own quest list from Blizzard's templates (Tracker.lua) inside its own frame...
 
 - **(top)** L1: Print L103, Q.Debounce L110, Q.Readable L122, Q.Fade L131, Q.HasAtlas L141, Q.Font L148, ParseHex L173, Q.Color L184, Motion.Duration L216, Motion.On L223, EaseOut L227, Motion.Tween L258, Motion.Target L273, Motion.Stop L279, Motion.Finish L284
 - **Compatibility: another add-on that replaces the quest tracker owns it. Clean Quest Tracker steps aside rather than fight.** L295: FindOwner L303, Q.Active L317
-- **Saved settings** L321: MigrateFrom05 L326, MigrateFrom06 L348, Migrate L371, LoadSettings L417, Q.ApplyPreset L459, Q.UpdatePresetName L472, Q.ResetSettings L490, Q.Apply L501, Q.Refresh L514, Q.SetLocked L520
-- **Startup** L528: Start L531
+- **Saved settings** L321: MigrateFrom05 L326, MigrateFrom06 L348, Migrate L371, LoadSettings L417, Q.ApplyPreset L461, Q.UpdatePresetName L474, Q.ResetSettings L492, Q.Apply L503, Q.Refresh L516, Q.SetLocked L522
+- **Startup** L530: Start L533
 
 ## Tracker/Progress.lua (194 lines)
 
@@ -28,24 +28,25 @@ Party badge: how many other members of your party have each quest, who they are,
 - **Tooltip** L443: RecolorNames L449, Listed L473, ObjectiveNames L496, AddMemberProgress L515, CanShare L554, ShowTooltip L558
 - **Badge** L599: OnClick L602, Build L616, Paint L637, Create L728, P.CreatePreview L745, preview:ShowStyle L748, P.Attach L754, P.Detach L772, HookQuestie L791, Changed L797
 
-## Tracker/Tracker.lua (1018 lines)
+## Tracker/Tracker.lua (1116 lines)
 
 The quest list: Clean Quest Tracker's own objective tracker module, built from Blizzard's module and block templates. The module is a private instance. Its methods are overridden on this instance only; Blizzard's QuestObjectiveTracker and...
 
 - **(top)** L1: T.PoiShown L41, T.FocusModeOn L46, T.ToggleFocusMode L51, T.PoiSize L57, T.PoiRoom L63, T.PoiMinRow L75
 - **Small helpers** L86: Hex L90, Lighten L100, T.LinkQuest L109, T.ShareQuest L131
-- **Watched quests, grouped by quest-log zone** L140: ReadZones L143, Displayable L158, Collect L170, SortFinished L207, Group L221, T.Title L260
-- **Lines and progress bars** L283: AddLine L289, MarkBarsUnused L296, HideUnusedBars L302, AddBar L312
-- **Quest menu (right-click), matching Blizzard's entries** L334: OpenQuestMenu L337
-- **Module overrides (this instance only)** L381: M:InitModule L386, M:CanUpdate L391, M:GetContextMenuParent L395, M:AcquireFrame L400, M:FreeBlock L409, M:FreeUnusedTimerBars L417, M:FreeUnusedProgressBars L426, M:FreeUnusedRightEdgeFrames L438, M:BeginLayout L450, M:OnEvent L474, M:OnBlockHeaderClick L493, M:OnBlockHeaderEnter L520, M:OnBlockHeaderLeave L536, M:OnFreeBlock L547, M:QCObjectives L570, M:QCQuest L652, M:LayoutContents L767
-- **Public** L833: T.QuestOffset L839, T.IsDirty L847, T.MarkDirty L852, T.Update L863, T.Rebuild L906, T.OnCombatEnded L921, WantNativeHidden L934, T.ApplyNativeVisibility L938, T.Create L971, container:IsCollapsed L975, container:ForceExpand L978, container:MarkDirty L983
+- **Watched quests, grouped by quest-log zone** L140: ReadZones L143, Displayable L158, Ranks L178, Rank L189, Collect L258, SortFinished L296, Group L308, T.Title L351
+- **Lines and progress bars** L374: AddLine L380, MarkBarsUnused L387, HideUnusedBars L393, AddBar L403
+- **Quest menu (right-click), matching Blizzard's entries** L425: OpenQuestMenu L428
+- **Module overrides (this instance only)** L472: M:InitModule L477, M:CanUpdate L482, M:GetContextMenuParent L486, M:AcquireFrame L491, M:FreeBlock L500, M:FreeUnusedTimerBars L508, M:FreeUnusedProgressBars L517, M:FreeUnusedRightEdgeFrames L529, M:BeginLayout L541, M:OnEvent L565, M:OnBlockHeaderClick L584, M:OnBlockHeaderEnter L611, M:OnBlockHeaderLeave L627, M:OnFreeBlock L638, M:QCObjectives L661, M:QCQuest L743, M:LayoutContents L858
+- **Public** L931: T.QuestOffset L937, T.IsDirty L945, T.MarkDirty L950, T.Update L961, T.Rebuild L1004, T.OnCombatEnded L1019, WantNativeHidden L1032, T.ApplyNativeVisibility L1036, T.Create L1069, container:IsCollapsed L1073, container:ForceExpand L1076, container:MarkDirty L1081
 
-## Tracker/TrackerZones.lua (262 lines)
+## Tracker/TrackerZones.lua (328 lines)
 
-zone heading rows (arrow, name, quest count and the line under it) and the zone tools: folding a zone, focus on the current zone, and expand or collapse all. The list (Tracker.lua) lays out a heading row for each zone with T.StyleZone.
+zone heading rows (arrow, name, quest count and the line under it), which zone you're in, and the zone tools: folding a zone, focus on the current zone, and expand or collapse all. The list (Tracker.lua) lays out a heading row for each zone with...
 
 - **Zone heading rows** L15: SetChevron L21, ZoneParts L35, T.PaintZone L66, T.StyleZone L86
-- **Zone tools: fold one zone, focus the current zone, expand or collapse all** L123: TurnZoneArrow L126, T.ToggleZone L139, Apply L145, CurrentZone L159, T.FocusCurrentZone L164, T.ToggleFocus L176, T.AllExpanded L211, T.ToggleAll L221, T.HasZone L247, T.OnZoneChanged L256
+- **Where you are** L123: Name L131, ZoneMapName L138, T.ReadWhere L165, T.CurrentZone L186
+- **Zone tools: fold one zone, focus the current zone, expand or collapse all** L200: TurnZoneArrow L203, T.ToggleZone L216, Apply L222, T.FocusCurrentZone L238, T.ToggleFocus L245, T.AllExpanded L280, T.ToggleAll L290, T.OnZoneChanged L318
 
 ## Tracker/TrackerPools.lua (149 lines)
 

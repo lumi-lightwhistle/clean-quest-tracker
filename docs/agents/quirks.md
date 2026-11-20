@@ -20,6 +20,13 @@ Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this i
 - **Redraws:** quest events alone are not enough. The watcher in `Tracker/TrackerWatch.lua` (including
   `QUEST_WATCH_UPDATE`) plus a once-a-second signature check keep the list current. Don't "optimise" either away
   without proving the list still updates.
+- **New watches go to the front of the watch list** (checked in game 2026-11-20): `C_QuestLog.AddQuestWatch` puts the
+  quest at index 1, so the newest tracked quest is first, and re-adding a list in its old order reverses it (re-add
+  from last to first to restore it). The game can drop a quest and re-add it, so `Rank` in `Tracker/Tracker.lua` keeps
+  each quest's place (saved per character in `db.questOrder`) instead of trusting the raw watch index.
+- **The current zone is read on zone events only** (`T.ReadWhere`), not on every redraw, so a redraw for any other
+  reason can't re-sort zones. Caves and buildings can report their own zone name; the zone-level map (climbing
+  `C_Map` parents) still names the outer zone.
 
 ## Secrets and party data
 - **Secret values exist on this client.** Guard reads with `Q.Readable` or `issecretvalue`; wrap risky API calls in
