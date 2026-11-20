@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.9](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.8...v0.8.9) (2026-11-20)
+
+
+### 🐛 Fixed
+
+* Clicking a quest item in the tracker now uses it ([#36](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/36)) ([b73d804](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/b73d804cae36c4b19afe1d558ebe0b0391bb80d3))
+
 ## [0.8.8](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.7...v0.8.8) (2026-11-20)
 
 
