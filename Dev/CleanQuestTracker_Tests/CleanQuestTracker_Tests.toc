@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: Clean Quest Tracker (self-test)
+## Notes: Developer self-test for Clean Quest Tracker: type /cqttest. Not for players; never packaged.
+## Author: Jack
+## Version: dev
+## Dependencies: CleanQuestTracker
+## SavedVariables: CleanQuestTrackerTestsDB
+
+SelfTest.lua

@@ -5,6 +5,8 @@ package-as: CleanQuestTracker
 
 ignore:
   - tools
+  - tests
+  - Dev
   - docs
   - .github
   - .gitattributes

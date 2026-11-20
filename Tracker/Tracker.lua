@@ -345,6 +345,19 @@ local function Group(list)
 	return groups, here
 end
 
+-- For the regression tests only (tests/ offline, Dev/CleanQuestTracker_Tests in game): the file-local pieces they
+-- check, so the tests run this code rather than a copy of it. Nothing in the add-on reads this table.
+T._internal = {
+	Rank = Rank,
+	Ranks = Ranks,
+	Collect = Collect,
+	SortFinished = SortFinished,
+	Group = Group,
+	goneAt = goneAt,
+	sessionRanks = sessionRanks,
+	OTHER_ZONE = OTHER_ZONE,
+}
+
 -- Title with optional level prefix. Finished quests are the game's bright green with "(Complete)" after the title,
 -- clearly brighter than the muted green of a low-level quest; others are coloured by difficulty or the header gold.
 -- Returns normal and hover text. Search matches are marked in the name, never in the level.

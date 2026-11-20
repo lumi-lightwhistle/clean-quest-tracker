@@ -25,7 +25,7 @@ Say which size you chose and why in the final report. If the user asks for a qui
 python tools/prereview.py
 ```
 
-It runs the syntax check on every changed Lua file (every Lua file when nothing is changed), checks the `.toc` against the Lua files, lists settings in `Q.defaults` that no code reads, lists settings-page highlight keys nothing handles, and greps the Lua files for wording that older versions used. Fix every line it prints before going on. If a line is a deliberate exception, add it to the allow-lists at the top of the script with a one-line reason; do not just ignore it.
+It runs the syntax check on every changed Lua file (every Lua file when nothing is changed), checks the `.toc` against the Lua files, lists settings in `Q.defaults` that no code reads, lists settings-page highlight keys nothing handles, greps the Lua files for wording that older versions used, and runs the offline tests (`tools/runtests.py`; with no Lua 5.1 or `lupa` on the machine it says they were skipped, which is not a failure: say so in the PR, CI still runs them). Fix every line it prints before going on. If a line is a deliberate exception, add it to the allow-lists at the top of the script with a one-line reason; do not just ignore it.
 
 ## 2. Scope the change
 

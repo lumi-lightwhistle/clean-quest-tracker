@@ -1,6 +1,6 @@
 name: CI
 
-# Runs once per pull request event. Both jobs are required checks on main, so nothing
+# Runs once per pull request event. All three jobs are required checks on main, so nothing
 # reaches main untested; CI does not run again after the merge.
 on:
   pull_request:
@@ -30,11 +30,29 @@ jobs:
         run: |
           # The .toc uses Windows-style paths (Tracker\Zones.lua); compare with forward slashes.
           grep -E '\.lua[[:space:]]*$' CleanQuestTracker.toc | tr -d '\r' | tr '\\' '/' | sort > /tmp/toc.txt
-          git ls-files '*.lua' ':!tools/*' | sort > /tmp/files.txt
+          # tests/ (offline tests) and Dev/ (the in-game self-test add-on) are not part of the add-on.
+          git ls-files '*.lua' ':!tools/*' ':!tests/*' ':!Dev/*' | sort > /tmp/files.txt
           status=0
           comm -23 /tmp/toc.txt /tmp/files.txt | sed 's/^/listed in the .toc but missing: /' | grep . && status=1
           comm -13 /tmp/toc.txt /tmp/files.txt | sed 's/^/not listed in the .toc: /' | grep . && status=1
           exit $status
+
+  # The offline regression tests (tests/run.lua): the add-on's own Lua, loaded in .toc order on a stand-in WoW API.
+  lua-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Lua 5.1 (the game's Lua version)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
+      - name: Every tests/test_*.lua is listed in SUITES in tests/run.lua
+        run: |
+          status=0
+          for f in tests/test_*.lua; do
+            grep -q "\"$(basename "$f")\"" tests/run.lua || { echo "not in SUITES in tests/run.lua: $f"; status=1; }
+          done
+          exit $status
+      - name: Run the offline tests
+        run: lua5.1 tests/run.lua
 
   # Squash-merged PR titles become the commit message, which drives the changelog.
   conventional-title:
