@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.10](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.9...v0.8.10) (2026-11-20)
+
+
+### 🐛 Fixed
+
+* Collapse every zone except the one you're in also folds zones that join the list later ([9135a42](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/9135a42ab1636ce874d751db2fcfd1ef7a681899))
+* Quests keep their place in the list when they complete ([9135a42](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/9135a42ab1636ce874d751db2fcfd1ef7a681899))
+* Your current zone stays on top when a quest completes, including in caves, buildings and dungeons ([9135a42](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/9135a42ab1636ce874d751db2fcfd1ef7a681899))
+
 ## [0.8.9](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.8...v0.8.9) (2026-11-20)
 
 
