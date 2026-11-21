@@ -4,7 +4,7 @@ Three layers. Each catches what the one before it can't.
 
 | Layer | What it covers | Where it runs | How long |
 |---|---|---|---|
-| 1. Offline tests (`tests/`) | The pure logic: tracked order (`Rank`), finished quests' place (`SortFinished`), zone grouping and order (`Group`), the watch list to zone groups (`Collect`), where you are (`T.ReadWhere`, `T.CurrentZone`, `T.OnZoneChanged`) | CI on every PR (`lua-tests`), and `python tools/prereview.py` when this machine has Lua 5.1 or `lupa` | Under a second |
+| 1. Offline tests (`tests/`) | Tracked order (`Rank`), finished quests' place (`SortFinished`), zone grouping and order (`Group`), the watch list to zone groups (`Collect`), where you are (`T.ReadWhere`, `T.CurrentZone`, `T.OnZoneChanged`), quest title and hover colours (`T.Title`) | CI on every PR (`lua-tests`), and `python tools/prereview.py` when this machine has Lua 5.1 or `lupa` | Under a second |
 | 2. In-game self-test (`/cqttest`) | What needs the real client and the real list: zones as drawn, the game briefly untracking and re-tracking a quest as it completes, focus mode folding and its fade | In the game, by hand | About 25 seconds |
 | 3. Manual checklist (below) | What neither can fake: the server, real travel, combat, a party, how it looks | In the game, by hand | A few minutes |
 

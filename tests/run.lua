@@ -10,7 +10,7 @@
 -- or, without Lua installed:                   python tools/runtests.py   (uses Lua if found, else the lupa package)
 -- Exit code 0 when every check passes, 1 otherwise.
 
-local SUITES = { "test_rank.lua", "test_group.lua", "test_where.lua", "test_collect.lua" }
+local SUITES = { "test_rank.lua", "test_group.lua", "test_where.lua", "test_collect.lua", "test_title.lua" }
 
 local ROOT = rawget(_G, "CQT_ROOT") or "."
 local write = io.write
