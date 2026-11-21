@@ -358,22 +358,25 @@ T._internal = {
 	OTHER_ZONE = OTHER_ZONE,
 }
 
--- Title with optional level prefix. Finished quests are the game's bright green with "(Complete)" after the title,
--- clearly brighter than the muted green of a low-level quest; others are coloured by difficulty or the header gold.
+-- Finished titles use the player's completion colour. For active quests, use the difficulty that Forever's quest
+-- log assigns to this quest ID. The numeric quest level is only for the optional prefix.
 -- Returns normal and hover text. Search matches are marked in the name, never in the level.
 function T.Title(questID, info, isComplete)
 	local db = Q.db
 	local name = T.QuestName(questID, info, isComplete)
-	local level = C_QuestLog.GetQuestDifficultyLevel and C_QuestLog.GetQuestDifficultyLevel(questID) or info.level
+	local level = Q.Readable(info.difficultyLevel) and info.difficultyLevel or info.level
 	local prefix = ""
-	if db.levels and level and level > 0 then
+	if db.levels and Q.Readable(level) and level > 0 then
 		prefix = ("[%d] "):format(level)
 	end
 	local color, highlight
 	if isComplete then
 		color = Q.CompleteColor()
-	elseif db.difficulty and level and GetQuestDifficultyColor then
-		color, highlight = GetQuestDifficultyColor(level, info.isScaling, questID)
+	elseif db.difficulty and C_PlayerInfo and C_PlayerInfo.GetContentDifficultyQuestForPlayer and GetDifficultyColor then
+		local ok, difficulty = pcall(C_PlayerInfo.GetContentDifficultyQuestForPlayer, questID)
+		if ok and Q.Readable(difficulty) then
+			color, highlight = GetDifficultyColor(difficulty)
+		end
 	end
 	if not color then
 		color = Q.Color("colorTitle")
@@ -1104,6 +1107,7 @@ function T.Create(parent)
 		"QUEST_TURNED_IN",
 		"QUEST_POI_UPDATE",
 		"SUPER_TRACKING_CHANGED",
+		"PLAYER_LEVEL_UP",
 		"PLAYER_MONEY",
 	}
 	module.headerHeight = 0

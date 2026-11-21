@@ -130,7 +130,7 @@ O.PAGES = {
 			} },
 			{ "Titles", nil, {
 				{ "toggle", k = "levels", hl = "lvl", label = "Show quest level", note = "The [37] in front of each title" },
-				{ "toggle", k = "difficulty", hl = "diff", label = "Colour titles by difficulty", note = "Off: every title uses the Quest titles colour (Colours page)" },
+				{ "toggle", k = "difficulty", hl = "diff", label = "Colour titles by difficulty", note = "Unfinished quests use the quest log's colours. Turn off to use the Quest titles colour." },
 			} },
 			{ "Quest focus icons", "The round icon beside each quest; click it to focus that quest", {
 				{ "toggle", get = IconsOn, set = SetIcons, hl = "poi", rebuild = true, label = "Show quest focus icons", note = "The game's own quest icon setting, so the world map follows it too" },
