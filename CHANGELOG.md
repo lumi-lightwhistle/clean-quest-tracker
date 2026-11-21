@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.11](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.10...v0.8.11) (2026-11-21)
+
+
+### 🐛 Fixed
+
+* Quest difficulty colours match the WoW Forever quest log ([#41](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/41)) ([e95cd11](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/e95cd11a9c4a82018ea578bdaab4e271cc4717bd))
+
 ## [0.8.10](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.9...v0.8.10) (2026-11-20)
 
 
