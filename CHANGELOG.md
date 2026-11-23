@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.13](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.12...v0.8.13) (2026-11-23)
+
+
+### ✨ New
+
+* Colours page shows each colour as a card, with Reset colours at the top ([8f511e0](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/8f511e0736bd55aee00d82efb4eda2bbeae7315b))
+* Quest titles colour has a By difficulty / My colour switch on the Colours page ([8f511e0](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/8f511e0736bd55aee00d82efb4eda2bbeae7315b))
+
+
+### 🐛 Fixed
+
+* Clicking just off an icon on the Quests bar no longer folds the tracker ([8f511e0](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/8f511e0736bd55aee00d82efb4eda2bbeae7315b))
+
 ## [0.8.12](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.11...v0.8.12) (2026-11-23)
 
 
