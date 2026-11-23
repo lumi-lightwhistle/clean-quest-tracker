@@ -18,7 +18,6 @@ local CLOSED_WIDTH = ICON_SIZE + 4
 local EDIT_LEFT, EDIT_RIGHT = 20, 58
 local WIDTH_TWEEN = "qc-search-width"
 -- Forever palette, as in the settings window.
-local PANEL = { 0.071, 0.059, 0.047 }
 local ACCENT = { 0.863, 0.655, 0.498 }
 local TEAL = { 0.247, 0.663, 0.788 }
 local INK = { 0.95, 0.93, 0.88 }
@@ -36,7 +35,6 @@ local LINE_STOPS = { { 0, 0 }, { 0.14, 0.38 }, { 0.32, 0.9 }, { 0.68, 0.9 }, { 0
 local WELL_REST_ALPHA = 0.42 -- how much of the well stays while a filter is kept and the box isn't being typed in
 
 local header, box, edit, icon, placeholder, count, clear, noMatch
-local band = {} -- fill and rule behind the whole bar
 local lineState -- "typing" or "resting": which colour the lit line is painted in
 local open = false
 
@@ -78,27 +76,10 @@ local function SetWidth(width, done)
 end
 
 -- The dark band behind the whole Quests bar while a search is open: it carries the bar's bronze rule, so the box reads
--- as part of the bar and not a separate widget.
-local function SetBandAlpha(alpha)
-	for _, texture in ipairs(band) do
-		texture:SetAlpha(alpha)
-	end
-end
-
+-- as part of the bar and not a separate widget. FrameBorder.lua draws it, fitted inside the background and border when
+-- either shows.
 local function ShowBand(show)
-	local target = show and 1 or 0
-	if show then
-		for _, texture in ipairs(band) do
-			texture:Show()
-		end
-	end
-	Q.Motion.Tween(BAND_TWEEN, band[1]:GetAlpha(), target, Duration(), SetBandAlpha, function()
-		if not open then
-			for _, texture in ipairs(band) do
-				texture:Hide()
-			end
-		end
-	end)
+	Q.Motion.Tween(BAND_TWEEN, F.SearchStripAlpha(), show and 1 or 0, Duration(), F.SetSearchStrip)
 end
 
 -- Paints the lit line in one colour: teal while typing, bronze while a filter is kept.
@@ -393,23 +374,8 @@ function F.CreateSearch(parent)
 		LayoutLine(width)
 	end)
 	LayoutLine(CLOSED_WIDTH)
-	-- The band behind the whole bar, drawn on the header itself so every icon and the box sit above it. It matches the
-	-- bar's own artwork in width.
-	local overhang = Q.HasAtlas("UI-QuestTracker-Secondary-Objective-Header") and 10 or 0
-	local fill = header:CreateTexture(nil, "BACKGROUND", nil, 3)
-	fill:SetPoint("TOPLEFT", -overhang, 0)
-	fill:SetPoint("BOTTOMRIGHT", overhang, 0)
-	fill:SetColorTexture(PANEL[1], PANEL[2], PANEL[3], 0.93)
-	local rule = header:CreateTexture(nil, "BACKGROUND", nil, 4)
-	rule:SetPoint("BOTTOMLEFT", -overhang, 0)
-	rule:SetPoint("BOTTOMRIGHT", overhang, 0)
-	rule:SetHeight(1)
-	rule:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.6)
-	band[1], band[2] = fill, rule
-	for _, texture in ipairs(band) do
-		texture:SetAlpha(0)
-		texture:Hide()
-	end
+	-- The band behind the whole bar (FrameBorder.lua), drawn on the header itself so every icon and the box sit above it.
+	F.CreateSearchStrip(header)
 	icon = box:CreateTexture(nil, "ARTWORK")
 	icon:SetTexture(MEDIA .. "Search")
 	icon:SetSize(13, 13)
