@@ -91,17 +91,17 @@ progress safety nets, so the list is always up to date.
 
 - **(top)** L1: T.Signature L9, T.StartWatching L51
 
-## UI/Frame.lua (791 lines)
+## UI/Frame.lua (837 lines)
 
 The tracker frame: header, scrolling quest area, auto height, and unlocked move/resize. Position is stored in UIParent units from the nearest top corner, so it survives UI scale and resolution changes. With auto height the frame grows to fit the quests up...
 
-- **(top)** L1: Clamp L31, Locked L36, F.ExtraRight L42, MinWidth L46, F.TooltipAnchor L50, F.IsExpanded L55, F.ViewBounds L59
-- **Position** L66: ApplyPosition L71, ConvertLegacyPosition L79, F.SavePosition L95
-- **Scrolling** L114: ScrollRange L117, ScrollTo L122, GlideStep L142, F.Scroll L146, UpdateScroll L158
-- **Height** L167: FinishRoll L173, SetHostHeight L184, F.Layout L204, F.SetContent L243, F.SetMinimized L250
-- **Header** L275: ShowControls L279, HeaderLeave L294, HeaderButton L300, F.HeaderButton L329, F.ShowControls L333, CreateHeader L337, lock.keepVisible L388, Grouped L394, focus.keepVisible L413, ExpandTip L418, FocusTip L442, target.available L454, target.keepVisible L457, F.SetHighlight L476, F.UpdateZoneTools L508, F.UpdateHeader L519
-- **Unlocked mode: move strip, resize grip, outline** L550: StopGestures L553, F.UpdateReadout L571, CreateUnlockControls L577, F.PlaceGrip L651
-- **Build and apply** L672: F.Create L675, F.Apply L756, F.OnCombatEnded L786
+- **(top)** L1: Clamp L33, Locked L38, F.ExtraRight L44, MinWidth L48, F.TooltipAnchor L52, F.IsExpanded L57, F.ViewBounds L61
+- **Position** L68: ApplyPosition L73, ConvertLegacyPosition L81, F.SavePosition L97
+- **Scrolling** L116: ScrollRange L119, ScrollTo L124, GlideStep L144, F.Scroll L148, UpdateScroll L160
+- **Height** L169: FinishRoll L175, SetHostHeight L186, F.Layout L206, F.SetContent L245, F.SetMinimized L252
+- **Header** L277: PlaceGuards L284, ShowControls L308, HeaderLeave L324, HeaderButton L330, F.HeaderButton L363, F.ShowControls L367, CreateHeader L371, lock.keepVisible L422, Grouped L428, focus.keepVisible L447, ExpandTip L452, FocusTip L477, target.available L489, target.keepVisible L492, F.SetHighlight L522, F.UpdateZoneTools L554, F.UpdateHeader L565
+- **Unlocked mode: move strip, resize grip, outline** L596: StopGestures L599, F.UpdateReadout L617, CreateUnlockControls L623, F.PlaceGrip L697
+- **Build and apply** L718: F.Create L721, F.Apply L802, F.OnCombatEnded L832
 
 ## UI/FrameBorder.lua (615 lines)
 
@@ -119,19 +119,19 @@ the search box in the Quests bar. A magnifying glass sits right of the zone tool
 
 - **(top)** L1: F.SearchOpen L41, Duration L45, Solid L49, LeftOffset L56, FullWidth L60, FadeTitle L65, SetWidth L72, ShowBand L81, PaintLine L86, LayoutLine L94, Paint L103, F.CloseSearch L122, F.OpenSearch L142, F.PlaceSearch L162, F.SetSearchCount L183, F.ShowNoMatch L190, F.SearchRegion L214, WatchClicks L226, HeaderLeave L236, CreateClear L242, CreateEdit L277, F.CreateSearch L329, find.available L335
 
-## UI/Options.lua (1485 lines)
+## UI/Options.lua (1717 lines)
 
 Settings: Clean Quest Tracker's own window (/cqt, the header cog, or Esc > Options > AddOns) and slash commands. The window is drawn by the add-on itself in WoW Forever's modern style, the same palette EllesmereUI Forever uses: warm charcoal panels, thin...
 
 - **Drawing helpers** L55: Solid L58, Outline L69, Recolor L81, Round L88, Text L97, Hex L108
-- **Applying a change** L113: Changed L121, GroupLabel L136, List L159, CloseList L175, Row L182, row.Enter L197, row.Leave L202, PassHover L217, Labels L228, RowHeight L260
-- **Controls** L264: Pill L270, switch:SetOn L286, Toggle L304, Current L312, Flip L318, row:Refresh L337, StepButton L343, Slider L377, Key L397, Shown L402, Set L406, row:Refresh L461, Choice L473, row:Refresh L506, Colour L521, row:Refresh L574, Presets L597, Enter L603, Leave L606, row:Refresh L642, BadgeStyles L660, row.Enter L708, row.Leave L711, row:Refresh L714, Button L729, ActionButton L750, Notice L764, Themes L795, row:Refresh L880, Inset L902, SpecEnabled L943, Gate L956, row:Refresh L980
-- **Window** L1003: UpdateSections L1011, UpdateThumb L1039, JumpTo L1054, LayoutNav L1064, ShowPage L1089, O.Refresh L1116, BuildPage L1125, SectionLinks L1148, ShowSectionsSwitch L1179, Flip L1195, row:Refresh L1201, Create L1210, O.Toggle L1396
-- **Esc > Options > AddOns entry** L1408: RegisterWithSettings L1411
-- **Slash commands** L1446: SlashCmdList.CLEANQUESTTRACKER L1454
+- **Applying a change** L113: Changed L121, GroupLabel L139, List L166, CloseList L182, Row L189, row.Enter L204, row.Leave L209, PassHover L224, Labels L235, RowHeight L267
+- **Controls** L271: Pill L277, switch:SetOn L293, Toggle L311, Current L319, Flip L325, row:Refresh L344, StepButton L350, Slider L384, Key L404, Shown L409, Set L413, row:Refresh L468, Segments L481, Refresh L509, Choice L524, row:Refresh L534, DifficultyColour L549, Swatches L570, Colour L655, row:Refresh L666, CloseCards L681, PlaceCard L689, Card L712, card.Enter L719, card.Leave L723, ColourCard L738, card:Refresh L798, Presets L820, Enter L826, Leave L829, row:Refresh L865, BadgeStyles L883, row.Enter L931, row.Leave L934, row:Refresh L937, Button L952, RunAction L974, Notice L984, Themes L1015, row:Refresh L1100, Inset L1122, SpecEnabled L1163, Gate L1173, row:Refresh L1197
+- **Window** L1220: UpdateSections L1228, UpdateThumb L1256, JumpTo L1271, LayoutNav L1281, ShowPage L1306, O.Refresh L1333, BuildPage L1342, SectionLinks L1380, ShowSectionsSwitch L1411, Flip L1427, row:Refresh L1433, Create L1442, O.Toggle L1628
+- **Esc > Options > AddOns entry** L1640: RegisterWithSettings L1643
+- **Slash commands** L1678: SlashCmdList.CLEANQUESTTRACKER L1686
 
-## UI/OptionsPages.lua (272 lines)
+## UI/OptionsPages.lua (277 lines)
 
 what each page of the settings window holds. Options.lua draws the window and the controls; this file only lists them. Each page is a name, a short note, and groups of rows: { label, side note, rows }. A row's first entry picks the control (toggle, slider,...
 
-- **(top)** L1: Decimal L33, Percent L37, Pixels L41, IconsOn L46, SetIcons L50, IndentKey L55, Rounded L62, Ornamented L66
+- **(top)** L1: Decimal L39, Percent L43, Pixels L47, IconsOn L52, SetIcons L56, IndentKey L61, Rounded L68, Ornamented L72
