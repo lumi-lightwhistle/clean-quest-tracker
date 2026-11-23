@@ -9,7 +9,7 @@
   neither is here. `prereview.py` runs it and reports a skip, not a failure, without Lua. See `docs/testing.md`.
 - `repomap.py`: writes `docs/REPOMAP.md`; `--check` exits 1 if it is stale.
 - `commit_gate.py`: Claude Code hook that blocks `git commit` while `prereview.py` fails. Needs `python` on the path.
-- `img.py`, `badges.py`, `card_icons.py`, `make_icon.py`, `search_icon.py`: image drawing for `Media/` and `docs/`.
+- `img.py`, `badges.py`, `card_icons.py`, `make_icon.py`, `search_icon.py`, `target_icon.py`, `tick_icon.py`: image drawing for `Media/` and `docs/`.
 - `border.py`: the bronze border's corner ring atlas, flourishes and crest, and the background themes' glow and stars (`python tools/border.py Media`).
 
 ## Branches, CI and merging

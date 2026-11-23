@@ -18,6 +18,8 @@ local EDGE = { r = 0.85, g = 0.69, b = 0.29 }
 local BRIGHT = { r = 1, g = 0.93, b = 0.55 }
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 local ICON_SIZE = 18 -- header icons share one size and centre line
+local ICON_GAP = 5 -- space between neighbouring header icons
+local GUARD_MARGIN = 6 -- how far the click guards reach past the outer icons
 
 local host, header, scroll, content, slider, strip, grip
 local unlockEdges = {} -- the outline shown while unlocked
@@ -40,7 +42,7 @@ end
 -- Room for one more header icon (and its gap) on the right while the Extras switch shows the target button. The title
 -- and the search box stop that much sooner, and the frame can't be narrower than that room needs.
 function F.ExtraRight()
-	return (Q.db and Q.db.superFocus) and ICON_SIZE + 5 or 0
+	return (Q.db and Q.db.superFocus) and ICON_SIZE + ICON_GAP or 0
 end
 
 local function MinWidth()
@@ -275,6 +277,33 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- Header
 ------------------------------------------------------------------------------------------------------------------------
+-- Click guards: a click-eating band under each group of header icons that takes a near miss and does nothing, so a
+-- click a pixel off an icon can't fold the tracker. The left one runs from the bar's edge to just past the last left
+-- icon (zone tools or search); the right one from just before the first right icon to the minimise button, which still
+-- folds the tracker as before.
+local function PlaceGuards()
+	local left, right = header.guardLeft, header.guardRight
+	if not left then
+		return
+	end
+	local last
+	for _, button in ipairs({ header.focus, header.expand, header.find }) do
+		if button and button:IsShown() then
+			last = button
+		end
+	end
+	left:ClearAllPoints()
+	left:SetShown(last ~= nil)
+	if last then
+		left:SetPoint("LEFT")
+		left:SetPoint("RIGHT", last, "RIGHT", GUARD_MARGIN, 0)
+	end
+	local first = header.target:IsShown() and header.target or header.cog
+	right:ClearAllPoints()
+	right:SetPoint("LEFT", first, "LEFT", -GUARD_MARGIN, 0)
+	right:SetPoint("RIGHT", header.minimize, "LEFT")
+end
+
 -- Header icons appear on hover. One that shows an active state (unlocked, zone focus, focus mode) stays visible while active.
 local function ShowControls(show)
 	for _, button in ipairs(controls) do
@@ -289,6 +318,7 @@ local function ShowControls(show)
 		end
 		button:EnableMouse(visible and true or false)
 	end
+	PlaceGuards()
 end
 
 local function HeaderLeave()
@@ -300,6 +330,10 @@ end
 local function HeaderButton(texture, fallback, size, tooltip, onClick)
 	local button = CreateFrame("Button", nil, header)
 	button:SetSize(size, size)
+	-- Clickable across the bar's full height and halfway into the gap on each side, so neighbouring icons meet and a
+	-- click just off one still uses it. Above the click guards, which catch what's left.
+	button:SetHitRectInsets(-ICON_GAP / 2, -ICON_GAP / 2, -(HEADER_HEIGHT - size) / 2, -(HEADER_HEIGHT - size) / 2)
+	button:SetFrameLevel(header:GetFrameLevel() + 2)
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetAllPoints()
 	if HasAtlas(texture) then
@@ -384,7 +418,7 @@ local function CreateHeader()
 		Q.SetLocked(not Q.db.locked)
 		GameTooltip:SetText(Q.db.locked and "Unlock to move and resize" or "Lock position and size")
 	end)
-	lock:SetPoint("RIGHT", minimize, "LEFT", -5, 0)
+	lock:SetPoint("RIGHT", minimize, "LEFT", -ICON_GAP, 0)
 	lock.keepVisible = function()
 		return Q.db and not Q.db.locked
 	end
@@ -423,7 +457,7 @@ local function CreateHeader()
 		F.UpdateHeader()
 	end)
 	header.expand = expand
-	expand:SetPoint("LEFT", focus, "RIGHT", 5, 0)
+	expand:SetPoint("LEFT", focus, "RIGHT", ICON_GAP, 0)
 	expand.available = Grouped
 
 	-- The magnifying glass and its box, right of the arrows (FrameSearch.lua).
@@ -435,7 +469,8 @@ local function CreateHeader()
 	end, function()
 		Q.Options.Toggle()
 	end)
-	cog:SetPoint("RIGHT", lock, "LEFT", -5, 0)
+	cog:SetPoint("RIGHT", lock, "LEFT", -ICON_GAP, 0)
+	header.cog = cog
 
 	-- Focus mode button (Extras page): shown only while the Extras switch is on; stays visible and bright while focus
 	-- mode is lit.
@@ -450,7 +485,7 @@ local function CreateHeader()
 		F.UpdateHeader()
 		GameTooltip:SetText(FocusTip())
 	end)
-	target:SetPoint("RIGHT", cog, "LEFT", -5, 0)
+	target:SetPoint("RIGHT", cog, "LEFT", -ICON_GAP, 0)
 	target.available = function()
 		return Q.db and Q.db.superFocus
 	end
@@ -466,6 +501,17 @@ local function CreateHeader()
 	header:SetScript("OnClick", function()
 		F.SetMinimized(not Q.db.minimized)
 	end)
+	for _, side in ipairs({ "guardLeft", "guardRight" }) do
+		local guard = CreateFrame("Frame", nil, header)
+		guard:SetHeight(HEADER_HEIGHT)
+		guard:SetFrameLevel(header:GetFrameLevel() + 1)
+		guard:EnableMouse(true)
+		guard:SetScript("OnEnter", function()
+			ShowControls(true)
+		end)
+		guard:SetScript("OnLeave", HeaderLeave)
+		header[side] = guard
+	end
 	ShowControls(false)
 end
 

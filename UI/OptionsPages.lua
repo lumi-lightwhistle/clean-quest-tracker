@@ -1,8 +1,9 @@
 -- Clean Quest Tracker: what each page of the settings window holds. Options.lua draws the window and the controls;
 -- this file only lists them. Each page is a name, a short note, and groups of rows: { label, side note, rows }.
--- A row's first entry picks the control (toggle, slider, choice, colour, presets, badges, themes, button, inset,
--- notice); `k` is the setting it changes and `hl` the part of the tracker shaded while it's hovered (the General
--- page's rows shade nothing: they change the whole frame). Other row options:
+-- A row's first entry picks the control (toggle, slider, choice, colour, card, presets, badges, themes, inset, notice;
+-- `card` is a colour as a card, two to a line, on the Colours page); `k` is the setting it changes and `hl` the part
+-- of the tracker shaded while it's hovered (the General page's rows shade nothing: they change the whole frame).
+-- Other row options:
 --   rebuild      redraw the whole list after a change (toggle, slider, choice)
 --   min max step format   a slider's range, step and how its value is written
 --   options      a choice's { value, label } pairs
@@ -10,11 +11,16 @@
 --   onEnable     a toggle's extra work when it is switched on
 --   icon         a toggle's texture, drawn before its label
 --   kFn          a slider that edits one of two saved settings, chosen by a function (the quest indent)
---   run, parts   a button's action; an inset's labels, bullets and text
+--   parts        an inset's labels, bullets and text
 --   lead, text   a notice's opening words (pale blue) and the rest
--- A row that only matters while another setting is set carries `enabledBy` (a saved switch that must be on),
--- `disabledBy` (one that must be off) or `enabledWhen` (a function), plus `needs`, the line shown when it is hovered
--- while greyed out. These apply to rows that are controls; buttons and notes ignore them.
+--   switch       a colour card's two-way choice bound to a saved switch: { k, on, off, noteOn, noteOff }, the labels
+--                and the note for each side (`note` is not used). While it's on, the palette gives way to the
+--                difficulty colours (Quest titles only)
+-- A group can carry `button = { label, run }`, a small button at the right of its label line (Reset colours); such a
+-- group has no side note, which would sit under the button.
+-- A row that only matters while another setting is set carries `enabledBy` (a saved switch that must be on) or
+-- `enabledWhen` (a function), plus `needs`, the line shown when it is hovered while greyed out. These apply to rows
+-- that are controls; notes ignore them.
 --
 -- A page with `sectionLinks` lists its named groups under its button in the side column, as links that jump to them
 -- (while the Show sections switch at the foot of that column is on; that switch is drawn in Options.lua, the one
@@ -130,7 +136,7 @@ O.PAGES = {
 			} },
 			{ "Titles", nil, {
 				{ "toggle", k = "levels", hl = "lvl", label = "Show quest level", note = "The [37] in front of each title" },
-				{ "toggle", k = "difficulty", hl = "diff", label = "Colour titles by difficulty", note = "Unfinished quests use the quest log's colours. Turn off to use the Quest titles colour." },
+				{ "toggle", k = "difficulty", hl = "diff", label = "Colour titles by difficulty", note = "Unfinished quests use the quest log's colours. Off: one colour you pick on the Colours page." },
 			} },
 			{ "Quest focus icons", "The round icon beside each quest; click it to focus that quest", {
 				{ "toggle", get = IconsOn, set = SetIcons, hl = "poi", rebuild = true, label = "Show quest focus icons", note = "The game's own quest icon setting, so the world map follows it too" },
@@ -169,26 +175,25 @@ O.PAGES = {
 	},
 	{
 		name = "Colours",
-		note = "Pick from a palette; the dot marks the default",
+		note = "The tick marks the colour in use, the bronze dot the default",
 		sectionLinks = true,
 		groups = {
 			{ "Text", nil, {
-				{ "colour", k = "colorZone", hl = "zfs", label = "Zone headings", note = "Zone names, their arrows and the line under them", enabledBy = "grouping", needs = NEEDS_ZONES },
-				{ "colour", k = "colorCount", hl = "zcount", label = "Number of quests", note = "The count at the right of each zone heading", enabledBy = "grouping", needs = NEEDS_ZONES },
-				{ "colour", k = "colorTitle", hl = "diff", label = "Quest titles", note = "Used while difficulty colours are off (Quests page)", disabledBy = "difficulty", needs = "Turn off Colour titles by difficulty (Quests page) to use this" },
-				{ "colour", k = "colorObjective", hl = "obj", label = "Objectives", note = "The lines under each quest" },
-				{ "colour", k = "colorDone", hl = "done", label = "Finished quests", note = "Title, (Complete) and full bars" },
-			} },
+				{ "card", k = "colorZone", hl = "zfs", label = "Zone headings", note = "Zone names, their arrows and the line under them", enabledBy = "grouping", needs = NEEDS_ZONES },
+				{ "card", k = "colorCount", hl = "zcount", label = "Number of quests", note = "The count at the right of each zone heading", enabledBy = "grouping", needs = NEEDS_ZONES },
+				{ "card", k = "colorTitle", hl = "diff", label = "Quest titles", switch = { k = "difficulty", on = "By difficulty", off = "My colour", noteOn = "Each unfinished quest in its quest log colour", noteOff = "One colour for every unfinished quest" } },
+				{ "card", k = "colorObjective", hl = "obj", label = "Objectives", note = "The lines under each quest" },
+				{ "card", k = "colorDone", hl = "done", label = "Finished quests", note = "Title, (Complete) and full bars" },
+			}, button = { label = "Reset colours", run = function()
+				for _, key in ipairs(COLOUR_KEYS) do
+					Q.db[key] = Q.defaults[key]
+				end
+				-- The Quest titles card's By difficulty / My colour choice lives on this page too.
+				Q.db.difficulty = Q.defaults.difficulty
+			end } },
 			{ "Bars and badges", nil, {
-				{ "colour", k = "colorBar", hl = "bars", label = "Progress bars", note = "The fill under counted objectives", enabledBy = "bars", needs = NEEDS_BARS },
-				{ "colour", k = "colorBadge", hl = "party", label = "Party badge", note = "The person icon; lighter once the whole party has the quest", enabledBy = "party", needs = NEEDS_PARTY },
-			} },
-			{ "", nil, {
-				{ "button", label = "Reset colours", run = function()
-					for _, key in ipairs(COLOUR_KEYS) do
-						Q.db[key] = Q.defaults[key]
-					end
-				end },
+				{ "card", k = "colorBar", hl = "bars", label = "Progress bars", note = "The fill under counted objectives", enabledBy = "bars", needs = NEEDS_BARS },
+				{ "card", k = "colorBadge", hl = "party", label = "Party badge", note = "The person icon; lighter once the whole party has the quest", enabledBy = "party", needs = NEEDS_PARTY },
 			} },
 		},
 	},

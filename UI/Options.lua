@@ -40,7 +40,7 @@ local TRACK_ON = { 0.665, 0.506, 0.385 }
 local TRACK_OFF = { 0.198, 0.194, 0.190 }
 local TEXT, NOTE, LABEL = 0.9, 0.53, 0.41 -- white alphas: settings, notes, section labels
 
--- Colours offered on the Colours page. The setting's default is always offered too, marked with a dot.
+-- Colours offered on the Colours page. The setting's default is always offered too, marked with a bronze dot.
 local PALETTE = {
 	{ "d9b04a", "Classic gold" }, { "ffd100", "Bright gold" }, { "f2dfa0", "Pale gold" }, { "dca77f", "Bronze" },
 	{ "c27a4a", "Copper" }, { "e89b2e", "Amber" }, { "ede6d6", "Ivory" }, { "cccccc", "Silver grey" },
@@ -84,7 +84,7 @@ local function Recolor(edges, color, alpha)
 	end
 end
 
--- Clips a texture to a circle (toggle tracks, knobs, slider thumbs, colour dots).
+-- Clips a texture to a circle (toggle tracks, knobs, slider thumbs).
 local function Round(texture, owner)
 	pcall(function()
 		local mask = owner:CreateMaskTexture()
@@ -133,13 +133,20 @@ end
 -- Rows. A group is a bordered list of rows with alternating shades. Each row is a button: hovering it, or any control
 -- in it, marks it with a bronze edge and shades the part of the tracker it changes.
 ------------------------------------------------------------------------------------------------------------------------
-local function GroupLabel(page, title, side)
+local CloseCards -- colour cards, defined with them below
+
+-- `lift` moves the label down that much below the section's top, to make room for a group button beside it.
+local function GroupLabel(page, title, side, lift)
+	CloseCards(page)
+	page.cardsInGroup = nil
 	if page.y < -4 then
 		page.y = page.y - 18
 	end
+	local top = page.y
+	page.y = page.y - (lift or 0)
 	if title and title ~= "" then
 		-- Where the section starts, for its link in the side column.
-		page.sections[#page.sections + 1] = { title = title, offset = -page.y }
+		page.sections[#page.sections + 1] = { title = title, offset = -top }
 		local label = Text(page, "GameFontNormal", 11, LABEL)
 		label:SetPoint("TOPLEFT", 4, page.y)
 		label:SetText(title:upper())
@@ -469,17 +476,14 @@ local function Slider(page, spec)
 	controls[#controls + 1] = row
 end
 
--- Segmented buttons.
-local function Choice(page, spec)
-	local row = Row(page, RowHeight(spec.note), spec.hl)
-	Labels(page, row, spec.label, spec.note)
+-- Segmented buttons in a row: get() returns the current value, set(value) stores a new one. Returns the outlined holder
+-- (placed by the caller) and its Refresh, which lights the current segment.
+local function Segments(row, options, segmentWidth, get, set)
 	local holder = CreateFrame("Frame", nil, row)
-	local segmentWidth = 76
-	holder:SetSize(segmentWidth * #spec.options, 26)
-	holder:SetPoint("RIGHT", -14, 0)
+	holder:SetSize(segmentWidth * #options, 26)
 	Outline(holder, C.white, 0.18)
 	local segments = {}
-	for index, option in ipairs(spec.options) do
+	for index, option in ipairs(options) do
 		local segment = CreateFrame("Button", nil, holder)
 		segment:SetSize(segmentWidth, 26)
 		segment:SetPoint("LEFT", (index - 1) * segmentWidth, 0)
@@ -496,16 +500,16 @@ local function Choice(page, spec)
 			divider:SetWidth(1)
 		end
 		segment:SetScript("OnClick", function()
-			Q.db[spec.k] = option[1]
-			Changed(spec.k, spec.rebuild)
+			set(option[1])
 		end)
 		PassHover(row, segment)
 		segment.value = option[1]
 		segments[index] = segment
 	end
-	function row:Refresh()
+	local function Refresh()
+		local value = get()
 		for _, segment in ipairs(segments) do
-			local selected = Q.db[spec.k] == segment.value
+			local selected = value == segment.value
 			segment.fill:SetShown(selected)
 			if selected then
 				segment.label:SetTextColor(C.accent[1], C.accent[2], C.accent[3], 1)
@@ -514,22 +518,56 @@ local function Choice(page, spec)
 			end
 		end
 	end
+	return holder, Refresh
+end
+
+local function Choice(page, spec)
+	local row = Row(page, RowHeight(spec.note), spec.hl)
+	Labels(page, row, spec.label, spec.note)
+	local holder, refresh = Segments(row, spec.options, 76, function()
+		return Q.db[spec.k]
+	end, function(value)
+		Q.db[spec.k] = value
+		Changed(spec.k, spec.rebuild)
+	end)
+	holder:SetPoint("RIGHT", -14, 0)
+	function row:Refresh()
+		refresh()
+	end
 	controls[#controls + 1] = row
 end
 
--- Colour row: label and current colour, then the palette. The setting's default carries a small dot.
-local function Colour(page, spec)
-	local row = Row(page, 86, spec.hl)
-	-- The palette sits at a fixed place below the label, so this row keeps its height.
-	row.fixedHeight = true
-	Labels(page, row, spec.label, spec.note, PAGE_WIDTH - 200)
-	local currentSwatch = Solid(row, "ARTWORK", C.white)
-	currentSwatch:SetSize(16, 16)
-	currentSwatch:SetPoint("TOPRIGHT", -14, -12)
-	local currentName = Text(row, "GameFontHighlightSmall", 11, NOTE)
-	currentName:SetPoint("RIGHT", currentSwatch, "LEFT", -8, 0)
-	currentName:SetJustifyH("RIGHT")
+-- The game's five difficulty colours, easiest first, for the Quest titles card while By difficulty is picked. Read from
+-- the client when it can say (the RelativeContentDifficulty values 0 to 4); otherwise the quest log's usual colours.
+local DIFFICULTIES = {
+	{ "Trivial", { 0.5, 0.5, 0.5 } },
+	{ "Easy", { 0.25, 0.75, 0.25 } },
+	{ "Fair", { 1, 0.82, 0 } },
+	{ "Hard", { 1, 0.5, 0.25 } },
+	{ "Very hard", { 1, 0.1, 0.1 } },
+}
+local function DifficultyColour(index)
+	local fallback = DIFFICULTIES[index][2]
+	if not GetDifficultyColor then
+		return fallback
+	end
+	local ok, color = pcall(GetDifficultyColor, index - 1)
+	if ok and type(color) == "table" and Q.Readable(color.r) and Q.Readable(color.g) and Q.Readable(color.b) then
+		return { color.r, color.g, color.b }
+	end
+	return fallback
+end
 
+-- Palette swatches, shared by colour rows and colour cards. The colour in use has a white ring standing off it with a
+-- tick inside (dark on pale colours, white on dark ones); the setting's default has a bronze dot with a dark rim on its
+-- top-right corner.
+-- place(index, swatch, count) positions each swatch. Returns a function that marks the colour in use and returns its
+-- name.
+local TICK = "Interface\\AddOns\\CleanQuestTracker\\Media\\Tick"
+local RING_OFF = 4 -- the ring's outer edge, out from the swatch (two pixels of ring, two of gap)
+local BADGE_SIZE = 10 -- the default's dot, inside a two-pixel dark rim
+
+local function Swatches(parent, row, spec, size, place)
 	local default = Q.defaults[spec.k]
 	local options = {}
 	local hasDefault = false
@@ -542,17 +580,44 @@ local function Colour(page, spec)
 	end
 	local swatches = {}
 	for index, entry in ipairs(options) do
-		local swatch = CreateFrame("Button", nil, row)
-		swatch:SetSize(22, 22)
-		swatch:SetPoint("TOPLEFT", 14 + (index - 1) * 28, -50)
+		-- The name shown for it: "Bronze (default)", or just "Default" for a default that isn't in the palette.
+		entry = { entry[1], label = entry[1] == default and entry[2] ~= "Default" and entry[2] .. " (default)" or entry[2] }
+		local swatch = CreateFrame("Button", nil, parent)
+		swatch:SetSize(size, size)
+		place(index, swatch, #options)
 		local rgb = Hex(entry[1])
 		Solid(swatch, "ARTWORK", rgb):SetAllPoints()
-		swatch.ring = Outline(swatch, C.black, 0.6, "OVERLAY")
+		Outline(swatch, C.black, 0.6, "OVERLAY")
+		local ring = CreateFrame("Frame", nil, swatch)
+		ring:SetPoint("TOPLEFT", -RING_OFF, RING_OFF)
+		ring:SetPoint("BOTTOMRIGHT", RING_OFF, -RING_OFF)
+		Outline(ring, C.white, 1, "OVERLAY")
+		local inner = CreateFrame("Frame", nil, ring)
+		inner:SetPoint("TOPLEFT", 1, -1)
+		inner:SetPoint("BOTTOMRIGHT", -1, 1)
+		Outline(inner, C.white, 1, "OVERLAY")
+		ring:Hide()
+		local tick = swatch:CreateTexture(nil, "OVERLAY", nil, 2)
+		tick:SetTexture(TICK)
+		tick:SetSize(size - 6, size - 6)
+		tick:SetPoint("CENTER")
+		if 0.299 * rgb[1] + 0.587 * rgb[2] + 0.114 * rgb[3] > 0.6 then
+			tick:SetVertexColor(C.window[1], C.window[2], C.window[3])
+		end
+		tick:Hide()
 		if entry[1] == default then
-			local dot = Solid(swatch, "OVERLAY", C.white, 1, 2)
-			dot:SetSize(7, 7)
-			dot:SetPoint("CENTER", swatch, "TOPRIGHT", -1, -1)
-			Round(dot, swatch)
+			-- On its own frame above the ring, so the ring doesn't cut across it when the default is in use.
+			local badge = CreateFrame("Frame", nil, swatch)
+			badge:SetSize(BADGE_SIZE + 4, BADGE_SIZE + 4)
+			badge:SetPoint("CENTER", swatch, "TOPRIGHT")
+			badge:SetFrameLevel(swatch:GetFrameLevel() + 3)
+			local rim = Solid(badge, "ARTWORK", C.card, 1)
+			rim:SetAllPoints()
+			Round(rim, badge)
+			local dot = Solid(badge, "OVERLAY", C.accent, 1)
+			dot:SetSize(BADGE_SIZE, BADGE_SIZE)
+			dot:SetPoint("CENTER")
+			Round(dot, badge)
 		end
 		swatch:SetScript("OnClick", function()
 			Q.db[spec.k] = entry[1]
@@ -561,31 +626,189 @@ local function Colour(page, spec)
 		swatch:SetScript("OnEnter", function(self)
 			row.Enter()
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
-			GameTooltip:SetText(entry[2] .. (entry[1] == default and " (default)" or ""))
+			GameTooltip:SetText(entry.label)
 			GameTooltip:Show()
 		end)
 		swatch:SetScript("OnLeave", function()
 			GameTooltip:Hide()
 			row.Leave()
 		end)
-		swatch.hex, swatch.name = entry[1], entry[2]
+		swatch.hex, swatch.label, swatch.ring, swatch.tick = entry[1], entry.label, ring, tick
 		swatches[index] = swatch
 	end
-	function row:Refresh()
+	return function()
 		local hex = Q.db[spec.k] or default
-		local rgb = Hex(hex)
-		currentSwatch:SetColorTexture(rgb[1], rgb[2], rgb[3], 1)
 		local name = ""
 		for _, swatch in ipairs(swatches) do
 			local selected = swatch.hex == hex
-			Recolor(swatch.ring, selected and C.white or C.black, selected and 1 or 0.6)
+			swatch.ring:SetShown(selected)
+			swatch.tick:SetShown(selected)
 			if selected then
-				name = swatch.name
+				name = swatch.label
 			end
 		end
-		currentName:SetText(name .. (hex == default and " (default)" or ""))
+		return name
+	end
+end
+
+-- Colour row (the Search page's highlight): label, the colour's name at the right, then the palette in one line.
+local function Colour(page, spec)
+	local row = Row(page, 86, spec.hl)
+	-- The palette sits at a fixed place below the label, so this row keeps its height.
+	row.fixedHeight = true
+	Labels(page, row, spec.label, spec.note, PAGE_WIDTH - 200)
+	local currentName = Text(row, "GameFontHighlightSmall", 11, NOTE)
+	currentName:SetPoint("TOPRIGHT", -14, -14)
+	currentName:SetJustifyH("RIGHT")
+	local mark = Swatches(row, row, spec, 22, function(index, swatch)
+		swatch:SetPoint("TOPLEFT", 14 + (index - 1) * 28, -50)
+	end)
+	function row:Refresh()
+		currentName:SetText(mark())
 	end
 	controls[#controls + 1] = row
+end
+
+-- Colour cards (the Colours page): two to a line, or one across the whole line (`wide`). Every card puts its palette
+-- at the same height, so the colours in each pair line up whatever the notes say.
+local CARD_GAP = 8
+local CARD_HEIGHT, WIDE_HEIGHT = 138, 100 -- two lines of colours, or one
+local PALETTE_TOP, PALETTE_STEP = -62, 36 -- the first line of colours (clear of a two-line note, default dot
+-- included), and from one line to the next
+local CARD_SWATCH = 24
+
+-- A left-hand card waits for a partner; a group label or the end of the page closes its line.
+function CloseCards(page)
+	if page.cardWaiting then
+		page.cardWaiting = false
+		page.y = page.y - CARD_HEIGHT
+	end
+end
+
+-- Where the next card goes: its left edge, top and width.
+local function PlaceCard(page, wide, height)
+	local half = (PAGE_WIDTH - CARD_GAP) / 2
+	if page.cardWaiting and not wide then
+		page.cardWaiting = false
+		local top = page.y
+		page.y = page.y - height
+		return half + CARD_GAP, top, half
+	end
+	CloseCards(page)
+	if page.cardsInGroup then
+		page.y = page.y - CARD_GAP
+	end
+	page.cardsInGroup = true
+	local top = page.y
+	if wide then
+		page.y = page.y - height
+		return 0, top, PAGE_WIDTH
+	end
+	page.cardWaiting = true
+	return 0, top, half
+end
+
+-- A bordered card that shades the part of the tracker it changes while hovered, like a row.
+local function Card(page, wide, height, highlightKey)
+	local x, y, width = PlaceCard(page, wide, height)
+	local card = CreateFrame("Button", nil, page)
+	card:SetPoint("TOPLEFT", x, y)
+	card:SetSize(width, height)
+	Solid(card, "BACKGROUND", C.card, 1):SetAllPoints()
+	local edges = Outline(card, C.white, 0.05)
+	function card.Enter()
+		Recolor(edges, C.accent, 0.4)
+		Q.Tracker.SetHighlight(highlightKey)
+	end
+	function card.Leave()
+		if card:IsMouseOver() then
+			return
+		end
+		Recolor(edges, C.white, 0.05)
+		Q.Tracker.SetHighlight(nil)
+	end
+	card:SetScript("OnEnter", card.Enter)
+	card:SetScript("OnLeave", card.Leave)
+	return card, width
+end
+
+-- spec.switch = { k = a saved switch, on = label, off = label, noteOn = note, noteOff = note } makes a wide card with a
+-- two-way choice at the top right. While the switch is on the colour isn't used, so the card shows the difficulty
+-- colours in place of the palette (only Quest titles has one: By difficulty / My colour).
+local function ColourCard(page, spec)
+	local switch = spec.switch
+	local wide = switch ~= nil
+	local card, width = Card(page, wide, wide and WIDE_HEIGHT or CARD_HEIGHT, spec.hl)
+	local title = Text(card, "GameFontHighlight", 14, TEXT)
+	title:SetPoint("TOPLEFT", 12, -10)
+	title:SetWidth(width - 24 - (wide and 220 or 0))
+	title:SetWordWrap(false)
+	title:SetText(spec.label)
+	-- Two lines at most, so the note never reaches the colours.
+	local hint = Text(card, "GameFontHighlightSmall", 11, NOTE)
+	hint:SetPoint("TOPLEFT", 12, -28)
+	hint:SetWidth(width - 24 - (wide and 220 or 0))
+	hint:SetMaxLines(2)
+	hint:SetText(spec.note or "")
+	-- The colour's name at the top right of a half card (the wide card has its switch there).
+	local currentName
+	if not wide then
+		currentName = Text(card, "GameFontHighlightSmall", 11, NOTE)
+		currentName:SetPoint("TOPRIGHT", -12, -12)
+		currentName:SetJustifyH("RIGHT")
+		currentName:SetWordWrap(false)
+	end
+
+	-- Everything that belongs to picking a colour, so the switch can hide it in one go.
+	local picker = CreateFrame("Frame", nil, card)
+	picker:SetAllPoints()
+	-- The colours spread across the card, in one line on a wide card and two on a half one.
+	local mark = Swatches(picker, card, spec, CARD_SWATCH, function(index, swatch, count)
+		local columns = wide and count or math.ceil(count / 2)
+		local step = (width - 2 * (12 + RING_OFF) - CARD_SWATCH) / (columns - 1)
+		local column, line = (index - 1) % columns, math.floor((index - 1) / columns)
+		swatch:SetPoint("TOPLEFT", math.floor(12 + RING_OFF + column * step + 0.5), PALETTE_TOP - line * PALETTE_STEP)
+	end)
+
+	local refreshSwitch, scale
+	if switch then
+		local holder
+		holder, refreshSwitch = Segments(card, { { true, switch.on }, { false, switch.off } }, 100, function()
+			return Q.db[switch.k] and true or false
+		end, function(value)
+			Q.db[switch.k] = value
+			Changed(switch.k)
+		end)
+		holder:SetPoint("TOPRIGHT", -12, -10)
+		-- The difficulty colours, shown for reference while the switch is on (not clickable).
+		scale = CreateFrame("Frame", nil, card)
+		scale:SetAllPoints()
+		local x = 12 + RING_OFF
+		for index, entry in ipairs(DIFFICULTIES) do
+			local chip = Solid(scale, "ARTWORK", DifficultyColour(index))
+			chip:SetSize(14, 14)
+			chip:SetPoint("TOPLEFT", x, PALETTE_TOP - 5)
+			local name = Text(scale, "GameFontHighlightSmall", 11, NOTE)
+			name:SetPoint("LEFT", chip, "RIGHT", 6, 0)
+			name:SetText(entry[1])
+			x = x + 14 + 6 + math.ceil(name:GetStringWidth()) + 18
+		end
+	end
+
+	function card:Refresh()
+		local name = mark()
+		if switch then
+			refreshSwitch()
+			local on = Q.db[switch.k] and true or false
+			picker:SetShown(not on)
+			scale:SetShown(on)
+			hint:SetText(on and switch.noteOn or switch.noteOff)
+		else
+			currentName:SetText(name)
+			title:SetWidth(width - 24 - math.ceil(currentName:GetStringWidth()) - 8)
+		end
+	end
+	controls[#controls + 1] = card
 end
 
 local PRESET_CARDS = {
@@ -747,14 +970,11 @@ local function Button(parent, label, primary, onClick)
 	return button
 end
 
-local function ActionButton(page, spec)
-	local button = Button(page, spec.label, false, function()
-		spec.run()
-		Q.Apply(true)
-		O.Refresh()
-	end)
-	button:SetPoint("TOPRIGHT", page, "TOPLEFT", PAGE_WIDTH, page.y - 4)
-	page.y = page.y - 38
+-- A button's action, then the tracker and this window catch up.
+local function RunAction(spec)
+	spec.run()
+	Q.Apply(true)
+	O.Refresh()
 end
 
 -- A short tinted notice with a small moonlit diamond (the Experimental section's opening line): spec.lead in pale blue,
@@ -937,14 +1157,11 @@ local function Inset(page, spec)
 	page.y = page.y + y - 6
 end
 
--- A setting that only matters while another is set (spec.enabledBy = a saved switch that must be on, spec.disabledBy =
--- one that must be off, spec.enabledWhen = a function) is dimmed, ignores the mouse, and names what it needs in a
--- tooltip (spec.needs). Hovering it still shades the part of the tracker it would change.
+-- A setting that only matters while another is set (spec.enabledBy = a saved switch that must be on, spec.enabledWhen =
+-- a function) is dimmed, ignores the mouse, and names what it needs in a tooltip (spec.needs). Hovering it still
+-- shades the part of the tracker it would change.
 local function SpecEnabled(spec)
 	if spec.enabledBy and not Q.db[spec.enabledBy] then
-		return false
-	end
-	if spec.disabledBy and Q.db[spec.disabledBy] then
 		return false
 	end
 	if spec.enabledWhen and not spec.enabledWhen() then
@@ -992,9 +1209,9 @@ local BUILD = {
 	slider = Slider,
 	choice = Choice,
 	colour = Colour,
+	card = ColourCard,
 	presets = Presets,
 	badges = BadgeStyles,
-	button = ActionButton,
 	inset = Inset,
 	notice = Notice,
 	themes = Themes,
@@ -1129,16 +1346,31 @@ local function BuildPage(index, info)
 	page.y = 0
 	page.sections = {}
 	for _, group in ipairs(info.groups) do
-		GroupLabel(page, group[1], group[2])
+		-- group.button: a small button at the right of the group's label line (the Colours page's Reset colours), so
+		-- it's in view without scrolling. It stands 6 above the label, which moves down to make room.
+		GroupLabel(page, group[1], group[2], group.button and 6)
+		if group.button then
+			local spec = group.button
+			local button = Button(page, spec.label, false, function()
+				RunAction(spec)
+			end)
+			button:SetHeight(24)
+			button:SetPoint("TOPRIGHT", page, "TOPLEFT", PAGE_WIDTH, page.y + 26)
+			page.y = page.y - 4
+		end
 		for _, spec in ipairs(group[3]) do
+			if spec[1] ~= "card" then
+				CloseCards(page)
+			end
 			local before = #controls
 			BUILD[spec[1]](page, spec)
-			-- Only a control that added itself to the list can be greyed out (buttons and notes don't).
-			if #controls > before and (spec.enabledBy or spec.disabledBy or spec.enabledWhen) then
+			-- Only a control that added itself to the list can be greyed out (notes don't).
+			if #controls > before and (spec.enabledBy or spec.enabledWhen) then
 				Gate(controls[#controls], spec)
 			end
 		end
 	end
+	CloseCards(page)
 	page.height = -page.y + 12
 	page:SetHeight(page.height)
 	pages[index] = page
