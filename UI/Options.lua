@@ -232,8 +232,14 @@ end
 -- belongs to (the Extras page uses the Quests bar's own icon).
 local ICON_SIZE = 18
 local ICON_ROOM = ICON_SIZE + 8 -- an icon's width plus the gap after it
+-- How wide a label and note may run beside a control: the row's left inset (14), the control and its right inset (14),
+-- and a 16 gap so wrapped text never touches the control.
+local function LabelRoom(controlWidth)
+	return PAGE_WIDTH - 14 - controlWidth - 14 - 16
+end
+local LABEL_WIDTH = LabelRoom(CONTROL_WIDTH)
 local function Labels(page, row, label, note, width, icon)
-	width = width or (PAGE_WIDTH - CONTROL_WIDTH - 30)
+	width = width or LABEL_WIDTH
 	local left = icon and 14 + ICON_ROOM or 14
 	if icon then
 		width = width - ICON_ROOM
@@ -478,21 +484,23 @@ end
 
 -- Segmented buttons in a row: get() returns the current value, set(value) stores a new one. Returns the outlined holder
 -- (placed by the caller) and its Refresh, which lights the current segment.
+-- Every segment is the same width: at least `segmentWidth`, and wider when a label needs it, so the longest word keeps
+-- SEGMENT_PAD of clear space either side.
+local SEGMENT_PAD = 14
 local function Segments(row, options, segmentWidth, get, set)
 	local holder = CreateFrame("Frame", nil, row)
-	holder:SetSize(segmentWidth * #options, 26)
 	Outline(holder, C.white, 0.18)
 	local segments = {}
 	for index, option in ipairs(options) do
 		local segment = CreateFrame("Button", nil, holder)
-		segment:SetSize(segmentWidth, 26)
-		segment:SetPoint("LEFT", (index - 1) * segmentWidth, 0)
 		segment.fill = Solid(segment, "BACKGROUND", C.accent, 0.18)
 		segment.fill:SetAllPoints()
+		Solid(segment, "HIGHLIGHT", C.white, 0.05):SetAllPoints()
 		segment.label = Text(segment, "GameFontHighlight", 13, NOTE)
 		segment.label:SetPoint("CENTER")
 		segment.label:SetJustifyH("CENTER")
 		segment.label:SetText(option[2])
+		segmentWidth = math.max(segmentWidth, math.ceil(segment.label:GetStringWidth()) + SEGMENT_PAD * 2)
 		if index > 1 then
 			local divider = Solid(segment, "BORDER", C.white, 0.12)
 			divider:SetPoint("TOPLEFT")
@@ -505,6 +513,11 @@ local function Segments(row, options, segmentWidth, get, set)
 		PassHover(row, segment)
 		segment.value = option[1]
 		segments[index] = segment
+	end
+	holder:SetSize(segmentWidth * #segments, 26)
+	for index, segment in ipairs(segments) do
+		segment:SetSize(segmentWidth, 26)
+		segment:SetPoint("LEFT", (index - 1) * segmentWidth, 0)
 	end
 	local function Refresh()
 		local value = get()
@@ -523,7 +536,6 @@ end
 
 local function Choice(page, spec)
 	local row = Row(page, RowHeight(spec.note), spec.hl)
-	Labels(page, row, spec.label, spec.note)
 	local holder, refresh = Segments(row, spec.options, 76, function()
 		return Q.db[spec.k]
 	end, function(value)
@@ -531,6 +543,8 @@ local function Choice(page, spec)
 		Changed(spec.k, spec.rebuild)
 	end)
 	holder:SetPoint("RIGHT", -14, 0)
+	-- The label and note wrap clear of the buttons, however wide their words made them.
+	Labels(page, row, spec.label, spec.note, math.min(LABEL_WIDTH, LabelRoom(holder:GetWidth())))
 	function row:Refresh()
 		refresh()
 	end
@@ -741,13 +755,13 @@ local function ColourCard(page, spec)
 	local card, width = Card(page, wide, wide and WIDE_HEIGHT or CARD_HEIGHT, spec.hl)
 	local title = Text(card, "GameFontHighlight", 14, TEXT)
 	title:SetPoint("TOPLEFT", 12, -10)
-	title:SetWidth(width - 24 - (wide and 220 or 0))
+	title:SetWidth(width - 24) -- a wide card narrows it to clear its switch, below
 	title:SetWordWrap(false)
 	title:SetText(spec.label)
 	-- Two lines at most, so the note never reaches the colours.
 	local hint = Text(card, "GameFontHighlightSmall", 11, NOTE)
 	hint:SetPoint("TOPLEFT", 12, -28)
-	hint:SetWidth(width - 24 - (wide and 220 or 0))
+	hint:SetWidth(width - 24)
 	hint:SetMaxLines(2)
 	hint:SetText(spec.note or "")
 	-- The colour's name at the top right of a half card (the wide card has its switch there).
@@ -780,6 +794,10 @@ local function ColourCard(page, spec)
 			Changed(switch.k)
 		end)
 		holder:SetPoint("TOPRIGHT", -12, -10)
+		-- The title and note stop short of the switch, however wide its words made it.
+		local room = width - 24 - holder:GetWidth() - 16
+		title:SetWidth(room)
+		hint:SetWidth(room)
 		-- The difficulty colours, shown for reference while the switch is on (not clickable).
 		scale = CreateFrame("Frame", nil, card)
 		scale:SetAllPoints()
@@ -906,7 +924,7 @@ local function BadgeStyles(page)
 		card.name:SetText(style.name)
 		card.note = Text(card, "GameFontHighlightSmall", 10, NOTE)
 		card.note:SetPoint("TOPLEFT", card.name, "BOTTOMLEFT", 0, -3)
-		card.note:SetWidth(width - 20)
+		card.note:SetWidth(width - 24)
 		card.note:SetText(style.note)
 		card:SetScript("OnClick", function()
 			Q.db.badgeStyle = style.key
@@ -1013,25 +1031,25 @@ local THEME_CARDS = {
 }
 
 local function Themes(page, spec)
-	local gap, art, caption = 12, 118, 44
+	local gap, art, caption, inset = 12, 118, 44, 18 -- inset: the same margin on both sides of the box
 	local box = CreateFrame("Frame", nil, page)
 	box:SetPoint("TOPLEFT", 0, page.y)
 	box:SetSize(PAGE_WIDTH, 14 + 20 + 10 + art + caption + 14)
 	Solid(box, "BACKGROUND", C.black, 0.1):SetAllPoints()
 	Outline(box, C.white, 0.05)
 	local title = Text(box, "GameFontHighlight", 14, TEXT)
-	title:SetPoint("TOPLEFT", 24, -14)
+	title:SetPoint("TOPLEFT", inset, -14)
 	title:SetText(spec.label)
 	local note = Text(box, "GameFontHighlightSmall", 11, NOTE)
-	note:SetPoint("TOPRIGHT", box, "TOPRIGHT", -14, -16)
+	note:SetPoint("TOPRIGHT", box, "TOPRIGHT", -inset, -16)
 	note:SetJustifyH("RIGHT")
 	note:SetText(spec.note)
-	local width = (PAGE_WIDTH - 24 - 14 - gap) / 2
+	local width = math.floor((PAGE_WIDTH - inset * 2 - gap) / 2)
 	local cards = {}
 	for index, info in ipairs(THEME_CARDS) do
 		local card = CreateFrame("Button", nil, box)
 		card:SetSize(width, art + caption)
-		card:SetPoint("TOPLEFT", 24 + (index - 1) * (width + gap), -44)
+		card:SetPoint("TOPLEFT", inset + (index - 1) * (width + gap), -44)
 		Solid(card, "BACKGROUND", C.card):SetAllPoints()
 		card.edges = Outline(card, C.white, 0.12)
 		local stage = CreateFrame("Frame", nil, card)
@@ -1542,7 +1560,9 @@ local function Create()
 	-- Page area: one scroll frame; each page is a child shown on its own.
 	scroll = CreateFrame("ScrollFrame", nil, panel)
 	scroll:SetPoint("TOPLEFT", side, "TOPRIGHT", PAD, -TOP_HEIGHT - 18)
-	scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -PAD - 10, FOOT_HEIGHT + 8)
+	-- Anchored from the side column, so it is exactly PAGE_WIDTH wide. Any narrower and the
+	-- right-hand border of every row, card and button on the page is cut off.
+	scroll:SetPoint("BOTTOMRIGHT", side, "BOTTOMRIGHT", PAD + PAGE_WIDTH, 8) -- the side column ends at the footer
 	scroll:SetClipsChildren(true)
 	child = CreateFrame("Frame", nil, scroll)
 	child:SetSize(PAGE_WIDTH, 10)

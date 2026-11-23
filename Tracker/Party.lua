@@ -340,7 +340,7 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 local HEIGHT = 18
-local PAD_LEFT, PAD_RIGHT, ICON_GAP, SPLIT_ICON = 5, 6, 3, 20
+local PAD_LEFT, PAD_RIGHT, ICON_GAP, SPLIT_ICON = 5, 6, 3, 18
 local BADGE_GAP = 3 -- clear space kept between badges on neighbouring rows
 local SHAPES = {
 	round = { file = MEDIA .. "BadgeRound", edge = MEDIA .. "BadgeRoundEdge", margin = 6 },
@@ -426,18 +426,11 @@ function P.MinRow()
 	return HEIGHT + BADGE_GAP - (Q.db.questGap or 0)
 end
 
--- How wide the badge is, in the current (or given) style. It is the same for every count. The tracker reserves this
--- much room so titles wrap clear of it.
-function P.BadgeWidth(style)
-	style = style or CurrentStyle()
+-- How wide the badge is. Every style and every count uses the Pill's width, so switching styles never moves the
+-- titles or the badge. The tracker reserves this much room so titles wrap clear of it.
+function P.BadgeWidth()
 	local textMode = Q.db.partyStyle == "text"
-	local text = SlotWidth()
-	if style == "plain" then
-		return text + 6 + (textMode and 0 or ICON_SIZE + 3)
-	elseif style == "split" then
-		return (textMode and 0 or SPLIT_ICON) + 7 + text + 7
-	end
-	return PAD_LEFT + (textMode and 2 or ICON_SIZE + ICON_GAP) + text + PAD_RIGHT
+	return PAD_LEFT + (textMode and 2 or ICON_SIZE + ICON_GAP) + SlotWidth() + PAD_RIGHT
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -643,7 +636,8 @@ local function Paint(badge, count, size, style)
 
 	Q.Font(label, LabelSize())
 	label:SetText(Label(count))
-	badge:SetWidth(P.BadgeWidth(style))
+	local width = P.BadgeWidth()
+	badge:SetWidth(width)
 	-- Centres this count's label in the shared width (a narrow "1" sits in the middle, not against the icon).
 	local nudge = math.floor((SlotWidth() - TextWidth(Label(count))) / 2)
 	fill:Hide()
@@ -704,19 +698,15 @@ local function Paint(badge, count, size, style)
 
 	icon:SetVertexColor(iconColor.r, iconColor.g, iconColor.b)
 	label:SetTextColor(textColor.r, textColor.g, textColor.b)
-	if style == "plain" then
-		if textMode then
-			label:SetPoint("LEFT", 3 + nudge, 0)
-		else
-			icon:SetPoint("LEFT", 3, 0)
-			label:SetPoint("LEFT", icon, "RIGHT", 3 + nudge, 0)
-		end
-	elseif style == "split" then
+	-- Plain places its icon and number where the Pill does, just without the container.
+	if style == "split" then
 		icon:SetPoint("CENTER", block, "CENTER", 0, 0)
-		-- The game font's digits sit about a pixel high in their line (the line leaves room for letters that hang
-		-- below), and its "1" has its ink to the right of its cell, so both are pulled back to the box's centre.
+		-- The number is centred in what the icon block leaves. The game font's digits sit about a pixel high in their
+		-- line (the line leaves room for letters that hang below), and its "1" has its ink to the right of its cell,
+		-- so both are pulled back to the box's centre.
+		local left = textMode and 0 or SPLIT_ICON
 		local inkX = (not textMode and count == 1) and -1 or 0
-		label:SetPoint("LEFT", (textMode and 7 or SPLIT_ICON + 7) + nudge + inkX, -1)
+		label:SetPoint("LEFT", left + math.floor((width - left - SlotWidth()) / 2) + nudge + inkX, -1)
 	elseif textMode then
 		label:SetPoint("LEFT", PAD_LEFT + 2 + nudge, 0)
 	else
