@@ -20,13 +20,13 @@ Thin rounded progress bars under counted objectives, with an eased fill animatio
 
 - **(top)** L1: Q.CompleteColor L13, Pieces L17, Paint L27, SegmentCount L54, PaintSegments L67, Draw L92, Animate L112, Q.NewProgressBar L125, Q.SetBarInset L144, Q.SetBarProgress L151, Q.PreviewProgress L169
 
-## Tracker/Party.lua (812 lines)
+## Tracker/Party.lua (802 lines)
 
 Party badge: how many other members of your party have each quest, who they are, and one-click sharing.
 
 - **(top)** L1: Readable L13, ClassColor L17, Member L27, QuestieComms L50, ShortName L68, QuestieNames L73, QuestieObjectives L96, Answer L119, ProgressGUIDs L131, Check L169, P.Members L200, P.Count L231, P.Report L250, Show L255, Missing L307, LabelSize L325, Label L329, CurrentStyle L368, Shade L373, SetShape L379, TextWidth L391, SlotWidth L407, P.MinRow L425, P.BadgeWidth L431
-- **Tooltip** L443: RecolorNames L449, Listed L473, ObjectiveNames L496, AddMemberProgress L515, CanShare L554, ShowTooltip L558
-- **Badge** L599: OnClick L602, Build L616, Paint L637, Create L728, P.CreatePreview L745, preview:ShowStyle L748, P.Attach L754, P.Detach L772, HookQuestie L791, Changed L797
+- **Tooltip** L436: RecolorNames L442, Listed L466, ObjectiveNames L489, AddMemberProgress L508, CanShare L547, ShowTooltip L551
+- **Badge** L592: OnClick L595, Build L609, Paint L630, Create L718, P.CreatePreview L735, preview:ShowStyle L738, P.Attach L744, P.Detach L762, HookQuestie L781, Changed L787
 
 ## Tracker/Tracker.lua (1133 lines)
 
@@ -119,16 +119,16 @@ the search box in the Quests bar. A magnifying glass sits right of the zone tool
 
 - **(top)** L1: F.SearchOpen L41, Duration L45, Solid L49, LeftOffset L56, FullWidth L60, FadeTitle L65, SetWidth L72, ShowBand L81, PaintLine L86, LayoutLine L94, Paint L103, F.CloseSearch L122, F.OpenSearch L142, F.PlaceSearch L162, F.SetSearchCount L183, F.ShowNoMatch L190, F.SearchRegion L214, WatchClicks L226, HeaderLeave L236, CreateClear L242, CreateEdit L277, F.CreateSearch L329, find.available L335
 
-## UI/Options.lua (1717 lines)
+## UI/Options.lua (1737 lines)
 
 Settings: Clean Quest Tracker's own window (/cqt, the header cog, or Esc > Options > AddOns) and slash commands. The window is drawn by the add-on itself in WoW Forever's modern style, the same palette EllesmereUI Forever uses: warm charcoal panels, thin...
 
 - **Drawing helpers** L55: Solid L58, Outline L69, Recolor L81, Round L88, Text L97, Hex L108
-- **Applying a change** L113: Changed L121, GroupLabel L139, List L166, CloseList L182, Row L189, row.Enter L204, row.Leave L209, PassHover L224, Labels L235, RowHeight L267
-- **Controls** L271: Pill L277, switch:SetOn L293, Toggle L311, Current L319, Flip L325, row:Refresh L344, StepButton L350, Slider L384, Key L404, Shown L409, Set L413, row:Refresh L468, Segments L481, Refresh L509, Choice L524, row:Refresh L534, DifficultyColour L549, Swatches L570, Colour L655, row:Refresh L666, CloseCards L681, PlaceCard L689, Card L712, card.Enter L719, card.Leave L723, ColourCard L738, card:Refresh L798, Presets L820, Enter L826, Leave L829, row:Refresh L865, BadgeStyles L883, row.Enter L931, row.Leave L934, row:Refresh L937, Button L952, RunAction L974, Notice L984, Themes L1015, row:Refresh L1100, Inset L1122, SpecEnabled L1163, Gate L1173, row:Refresh L1197
-- **Window** L1220: UpdateSections L1228, UpdateThumb L1256, JumpTo L1271, LayoutNav L1281, ShowPage L1306, O.Refresh L1333, BuildPage L1342, SectionLinks L1380, ShowSectionsSwitch L1411, Flip L1427, row:Refresh L1433, Create L1442, O.Toggle L1628
-- **Esc > Options > AddOns entry** L1640: RegisterWithSettings L1643
-- **Slash commands** L1678: SlashCmdList.CLEANQUESTTRACKER L1686
+- **Applying a change** L113: Changed L121, GroupLabel L139, List L166, CloseList L182, Row L189, row.Enter L204, row.Leave L209, PassHover L224, LabelRoom L237, Labels L241, RowHeight L273
+- **Controls** L277: Pill L283, switch:SetOn L299, Toggle L317, Current L325, Flip L331, row:Refresh L350, StepButton L356, Slider L390, Key L410, Shown L415, Set L419, row:Refresh L474, Segments L490, Refresh L522, Choice L537, row:Refresh L548, DifficultyColour L563, Swatches L584, Colour L669, row:Refresh L680, CloseCards L695, PlaceCard L703, Card L726, card.Enter L733, card.Leave L737, ColourCard L752, card:Refresh L816, Presets L838, Enter L844, Leave L847, row:Refresh L883, BadgeStyles L901, row.Enter L949, row.Leave L952, row:Refresh L955, Button L970, RunAction L992, Notice L1002, Themes L1033, row:Refresh L1118, Inset L1140, SpecEnabled L1181, Gate L1191, row:Refresh L1215
+- **Window** L1238: UpdateSections L1246, UpdateThumb L1274, JumpTo L1289, LayoutNav L1299, ShowPage L1324, O.Refresh L1351, BuildPage L1360, SectionLinks L1398, ShowSectionsSwitch L1429, Flip L1445, row:Refresh L1451, Create L1460, O.Toggle L1648
+- **Esc > Options > AddOns entry** L1660: RegisterWithSettings L1663
+- **Slash commands** L1698: SlashCmdList.CLEANQUESTTRACKER L1706
 
 ## UI/OptionsPages.lua (277 lines)
 
