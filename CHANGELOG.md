@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.12](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.11...v0.8.12) (2026-11-23)
+
+
+### 🐛 Fixed
+
+* The search bar's dark strip now fits inside the background and border ([#43](https://github.com/lumi-lightwhistle/clean-quest-tracker/issues/43)) ([fec15af](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/fec15af6eaaf2e37e8e843da489cadac7e1153ea))
+
 ## [0.8.11](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.10...v0.8.11) (2026-11-21)
 
 
