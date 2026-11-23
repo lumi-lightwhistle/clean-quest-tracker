@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.14](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.13...v0.8.14) (2026-11-23)
+
+
+### 🐛 Fixed
+
+* Party badges are the same size in every badge style, so switching styles no longer shifts the tracker ([4bfae81](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/4bfae813a449edec7ae2ab186972443fe418e41e))
+* Settings window no longer cuts off borders on the right, and choice buttons fit their words ([4bfae81](https://github.com/lumi-lightwhistle/clean-quest-tracker/commit/4bfae813a449edec7ae2ab186972443fe418e41e))
+
 ## [0.8.13](https://github.com/lumi-lightwhistle/clean-quest-tracker/compare/v0.8.12...v0.8.13) (2026-11-23)
 
 
