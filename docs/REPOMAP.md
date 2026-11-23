@@ -103,21 +103,21 @@ The tracker frame: header, scrolling quest area, auto height, and unlocked move/
 - **Unlocked mode: move strip, resize grip, outline** L550: StopGestures L553, F.UpdateReadout L571, CreateUnlockControls L577, F.PlaceGrip L651
 - **Build and apply** L672: F.Create L675, F.Apply L756, F.OnCombatEnded L786
 
-## UI/FrameBorder.lua (504 lines)
+## UI/FrameBorder.lua (615 lines)
 
 the frame's backdrop. The dark panel behind the list (square or with rounded corners, padded out from the list, plain or in a background theme), and the optional bronze border with its corner flourishes and the crest on the header. Everything here is drawn...
 
 - **(top)** L1: F.Framed L20
 - **The look: line weights, finishes and the layers of the line** L24: Hex L73, Byte L74, Layers L82
 - **Drawing helpers** L92: Place L106, HideAll L117, Mirror L127, SetRing L139, Shade L149, PanelColor L162, FillPanel L170, PaintExtras L180, StarsTexture L200, GlowTexture L209, Metal L219
-- **Building the pieces** L235: RingTexture L238, Plain L245, F.CreateBackdrop L251, PaintPanel L283, Run L319, PaintLine L349, PaintOrnaments L395, F.LayoutBackdrop L422, Setting L445, F.PaintBackdrop L452
-- **Theme samples for the settings window's cards** L489: F.ThemeSample L495
+- **Building the pieces** L235: RingTexture L238, Plain L245, F.CreateBackdrop L251, PaintPanel L283, Run L319, PaintLine L349, PaintOrnaments L395, StripColor L434, Lift L436, F.CreateSearchStrip L442, Piece L443, LayoutStrip L457, F.SetSearchStrip L511, F.SearchStripAlpha L526, F.LayoutBackdrop L531, Setting L555, F.PaintBackdrop L562
+- **Theme samples for the settings window's cards** L600: F.ThemeSample L606
 
-## UI/FrameSearch.lua (426 lines)
+## UI/FrameSearch.lua (392 lines)
 
 the search box in the Quests bar. A magnifying glass sits right of the zone tools (or first, without zones). Clicking it grows a box out of the icon while the Quests title fades. Typing filters the list (TrackerSearch.lua). Clicking away or Enter keeps the...
 
-- **(top)** L1: F.SearchOpen L43, Duration L47, Solid L51, LeftOffset L58, FullWidth L62, FadeTitle L67, SetWidth L74, SetBandAlpha L82, ShowBand L88, PaintLine L105, LayoutLine L113, Paint L122, F.CloseSearch L141, F.OpenSearch L161, F.PlaceSearch L181, F.SetSearchCount L202, F.ShowNoMatch L209, F.SearchRegion L233, WatchClicks L245, HeaderLeave L255, CreateClear L261, CreateEdit L296, F.CreateSearch L348, find.available L354
+- **(top)** L1: F.SearchOpen L41, Duration L45, Solid L49, LeftOffset L56, FullWidth L60, FadeTitle L65, SetWidth L72, ShowBand L81, PaintLine L86, LayoutLine L94, Paint L103, F.CloseSearch L122, F.OpenSearch L142, F.PlaceSearch L162, F.SetSearchCount L183, F.ShowNoMatch L190, F.SearchRegion L214, WatchClicks L226, HeaderLeave L236, CreateClear L242, CreateEdit L277, F.CreateSearch L329, find.available L335
 
 ## UI/Options.lua (1485 lines)
 

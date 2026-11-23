@@ -418,11 +418,121 @@ local function PaintOrnaments(x0, y0, width, height)
 		CREST_HEIGHT * scale)
 end
 
+------------------------------------------------------------------------------------------------------------------------
+-- The search strip: the dark band behind the Quests bar while a search is open (FrameSearch.lua fades it in and out).
+-- With the panel or the border showing, it fills the top of the panel inside the line and its rounded corners, tinted
+-- from the theme, so it reads as part of the frame. With neither, it is the plain band players have always had, as wide
+-- as the bar's own artwork. It is drawn on the header, so the bar's icons and the search box sit above it.
+------------------------------------------------------------------------------------------------------------------------
+local STRIP_PLAIN = { 0.071, 0.059, 0.047, 0.93 }
+local STRIP_RULE = { 0.863, 0.655, 0.498, 0.6 }
+local strip -- { header, middle, left, right, corners = { top-left, top-right }, rule, all }
+local stripAlpha = 0
+
+-- The strip's colour inside a frame: the theme's top colour lifted a little, and more opaque than the panel, so the bar
+-- stays solid over a bright world even when the panel is faint.
+local function StripColor(theme, darkness)
+	local top = theme.top
+	local function Lift(value)
+		return math.min(1, value * 1.6 + 6 / 255)
+	end
+	return Lift(top[1]), Lift(top[2]), Lift(top[3]), math.max(0.72, math.min(0.93, darkness + 0.3))
+end
+
+function F.CreateSearchStrip(header)
+	local function Piece(sublevel, ring)
+		local texture = header:CreateTexture(nil, "BACKGROUND", nil, sublevel)
+		if ring then
+			texture:SetTexture(RING.file)
+		end
+		texture:Hide()
+		return texture
+	end
+	strip = { header = header, middle = Piece(3), left = Piece(3), right = Piece(3), rule = Piece(4) }
+	strip.corners = { Piece(3, true), Piece(3, true) }
+	strip.all = { strip.middle, strip.left, strip.right, strip.corners[1], strip.corners[2], strip.rule }
+end
+
+-- Lays the strip out for the current look and frame size, at its current opacity (hidden at 0).
+local function LayoutStrip()
+	if not strip then
+		return
+	end
+	HideAll(strip.all)
+	if stripAlpha <= 0 then
+		return
+	end
+	local header, middle, rule = strip.header, strip.middle, strip.rule
+	local width, height = header:GetWidth(), header:GetHeight()
+	local frameHeight = host and host:GetHeight()
+	rule:SetColorTexture(STRIP_RULE[1], STRIP_RULE[2], STRIP_RULE[3], STRIP_RULE[4])
+	if not (look.darkness > 0 or look.border) or not width or width <= 0 or not frameHeight or frameHeight <= 0 then
+		local overhang = Q.HasAtlas("UI-QuestTracker-Secondary-Objective-Header") and 10 or 0
+		middle:SetColorTexture(STRIP_PLAIN[1], STRIP_PLAIN[2], STRIP_PLAIN[3], STRIP_PLAIN[4])
+		middle:ClearAllPoints()
+		middle:SetPoint("TOPLEFT", -overhang, 0)
+		middle:SetPoint("BOTTOMRIGHT", overhang, 0)
+		rule:ClearAllPoints()
+		rule:SetPoint("BOTTOMLEFT", -overhang, 0)
+		rule:SetPoint("BOTTOMRIGHT", overhang, 0)
+		rule:SetHeight(1)
+		middle:Show()
+		rule:Show()
+	else
+		-- Inside the line (its catch-light reaches weight / 2 + 0.75 in from the panel's edge), from the panel's top down
+		-- to the bar's rule. The header sits over the frame's top, so the panel's top is `pad` above it.
+		local pad = look.pad
+		local inset = look.border and look.weight / 2 + 0.75 or 0
+		local x0, y0 = inset - pad, inset - pad
+		local w, h = width + 2 * (pad - inset), height - y0
+		local radius = math.min(look.radius, width / 2 + pad, frameHeight / 2 + pad)
+		local r = math.max(0, math.min(radius - inset, h, w / 2))
+		local red, green, blue, alpha = StripColor(look.theme, look.darkness)
+		for _, texture in ipairs({ middle, strip.left, strip.right }) do
+			texture:SetColorTexture(red, green, blue, alpha)
+		end
+		Place(middle, x0 + r, y0, w - 2 * r, h, header)
+		Place(strip.left, x0, y0 + r, r, h - r, header)
+		Place(strip.right, x0 + w - r, y0 + r, r, h - r, header)
+		for corner, texture in ipairs(strip.corners) do
+			SetRing(texture, corner, 0)
+			texture:SetVertexColor(red, green, blue, alpha)
+			Place(texture, corner == 1 and x0 or x0 + w - r, y0, r, r, header)
+		end
+		Place(rule, x0, height - 1, w, 1, header)
+	end
+	for _, texture in ipairs(strip.all) do
+		texture:SetAlpha(stripAlpha)
+	end
+end
+
+-- Sets the strip's opacity (0 hides it). FrameSearch.lua calls this every frame while it fades, so only showing or
+-- hiding it lays it out again; the frame's own changes reach it through F.LayoutBackdrop.
+function F.SetSearchStrip(alpha)
+	if not strip then
+		return
+	end
+	local relayout = stripAlpha <= 0 or alpha <= 0
+	stripAlpha = alpha
+	if relayout then
+		LayoutStrip()
+		return
+	end
+	for _, texture in ipairs(strip.all) do
+		texture:SetAlpha(alpha)
+	end
+end
+
+function F.SearchStripAlpha()
+	return stripAlpha
+end
+
 -- Lays every piece out for the frame's current size. Runs after each setting change and whenever the frame resizes.
 function F.LayoutBackdrop()
 	if not host then
 		return
 	end
+	LayoutStrip()
 	local frameWidth, frameHeight = host:GetWidth(), host:GetHeight()
 	if not frameWidth or frameWidth <= 0 or not frameHeight or frameHeight <= 0 then
 		return
@@ -465,6 +575,7 @@ function F.PaintBackdrop(darkness)
 	look.crest = db.borderCrest and true or false
 	look.flourishSize = Setting("flourishSize")
 	local weight = WEIGHTS[db.borderWeight] or WEIGHTS[Q.defaults.borderWeight]
+	look.weight = weight
 	look.layers = Layers(weight)
 	-- Clamp to the screen by the panel and line, not the bare frame, so neither is cut off at a screen edge. Frame.lua
 	-- calls this only when the frame may move (no quest item button on screen in combat; see Locked() there).
