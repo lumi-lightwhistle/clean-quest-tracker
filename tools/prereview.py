@@ -122,7 +122,7 @@ def check_stale(texts):
 def check_suites():
     """Every tests/test_*.lua is listed in SUITES in tests/run.lua, so none is silently left out (CI checks it too)."""
     runner = (ROOT / "tests" / "run.lua").read_text(encoding="utf-8")
-    listed = set(re.findall(r'"(test_\w+\.lua)"', re.search(r"local SUITES = \{(.*?)\}", runner).group(1)))
+    listed = set(re.findall(r'"(test_\w+\.lua)"', re.search(r"local SUITES = \{(.*?)\}", runner, re.S).group(1)))
     on_disk = {p.name for p in (ROOT / "tests").glob("test_*.lua")}
     problems = [f"tests/{n} is not in SUITES in tests/run.lua, so it never runs" for n in sorted(on_disk - listed)]
     problems += [f"SUITES in tests/run.lua lists a missing file: {n}" for n in sorted(listed - on_disk)]

@@ -48,7 +48,7 @@ Start one read-only reviewer per group, in parallel. Use a general-purpose agent
 4. **Duplication.** Control builders, shaders and helpers that repeat each other.
 5. **Dead code.** Unused locals, functions, constants and settings; options that nothing passes any more; branches that cannot run.
 6. **Stale text.** Comments, settings notes, README, AGENTS.md, CONTRIBUTING and the CurseForge page text that describe how it used to work. The settings window's page names and groupings are described in several places.
-7. **Settings.** Every key in `Q.defaults` has a control or is deliberately internal. Every `hl` key has a shader or a frame handler. Every row that only matters while another setting is on says so (`enabledBy`, `enabledWhen`, `needs`). Presets and `Q.PRESET_KEYS` agree with the Layout page.
+7. **Settings.** Every key in `Q.defaults` has a control or is deliberately internal. Every `hl` key has a shader or a frame handler. Every row that only matters while another setting is on says so (`enabledBy`, `enabledWhen`, `needs`). Presets and `Q.PRESET_KEYS` agree with the Layout page; `Q.LOOK_KEYS`, `Q.LOOK_CHOICES`, `Q.THEMES` and the Appearance page's `LOOK_OPTIONS` agree with each other.
 
 Each reviewer reports a prioritised list: file and line, what is wrong, and a concrete change. It must also say what it did not cover. If a reviewer reports that it did not finish, start another on exactly the part it missed.
 

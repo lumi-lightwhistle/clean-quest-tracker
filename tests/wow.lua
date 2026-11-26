@@ -320,7 +320,11 @@ function Mixin(object, ...)
 	return object
 end
 function CreateColor(r, g, b, a)
-	return { r = r, g = g, b = b, a = a }
+	local color = { r = r, g = g, b = b, a = a }
+	function color:SetRGBA(red, green, blue, alpha)
+		self.r, self.g, self.b, self.a = red, green, blue, alpha
+	end
+	return color
 end
 strtrim = function(s)
 	return (s:gsub("^%s+", ""):gsub("%s+$", ""))

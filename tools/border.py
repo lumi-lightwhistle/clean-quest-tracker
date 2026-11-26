@@ -1,4 +1,5 @@
-"""Textures for the tracker's backdrop: the bronze border and the background themes (UI/FrameBorder.lua).
+"""Textures for the tracker's backdrop (UI/FrameBorder.lua): the bronze border, the skies' glow and the sample cards'
+stars; and Moontide's wave on progress bars (Tracker/Progress.lua).
 python tools/border.py Media
 
   BorderRing.tga             512x256, white with alpha (tinted in game). 32 quarter rings in 64px cells, 8 across:
@@ -16,6 +17,9 @@ python tools/border.py Media
                              nothing at an ellipse that fills the image (the Moonglow theme's moonlight, tinted in game).
   BackdropStars.tga          128x128, in colour, tiled: four one-pixel specks, two white at 30% and two pale blue at
                              22% (the Moonglow theme's stars; about the preview's one of each per 95x85 pixels).
+  BarWave.tga                64x8, white with alpha, tiled across: one crest of Moontide's light on a smooth progress
+                             bar (Tracker/Progress.lua). Opaque at the tile's middle, fading straight down to nothing a
+                             third of the tile either side, so each crest is two thirds of TIDE_SPACING wide.
 
 The art follows the approved design preview (not in the repo), which drew it at 2x. The flourish and
 crest are coloured per finish rather than tinted, because each holds several colours (dark edge, metal gradient,
@@ -300,6 +304,18 @@ def stars(out):
     write_tga_rgba(out + "BackdropStars.tga", rows)
 
 
+def wave(out):
+    width, height = 64, 8
+    row = []
+    for x in range(width):
+        hits = 0.0
+        for sx in range(SS):
+            u = (x + (sx + 0.5) / SS) / width
+            hits += max(0.0, 1 - abs(u - 0.5) * 3)
+        row.append(hits / SS)
+    write_tga(out + "BarWave.tga", [list(row) for _ in range(height)])
+
+
 if __name__ == "__main__":
     target = os.path.join(sys.argv[1] if len(sys.argv) > 1 else "Media", "")
     ring_atlas(target)
@@ -307,4 +323,5 @@ if __name__ == "__main__":
     art("BorderCrest", crest_ops(), 256, 128, (4.0, -32.0, -16.0), target)
     glow(target)
     stars(target)
+    wave(target)
     print("done")

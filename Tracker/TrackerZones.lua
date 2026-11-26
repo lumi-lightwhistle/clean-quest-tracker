@@ -11,6 +11,7 @@ local ZONE_OFFSET_X = T.ZONE_OFFSET_X
 local ZONE_TEMPLATE = T.ZONE_TEMPLATE
 local ZONE_COUNT_WIDTH = 24
 local RULE_ALPHA = 0.35 -- the line under a zone heading, in the zone colour
+local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
 
 ------------------------------------------------------------------------------------------------------------------------
 -- Zone heading rows
@@ -53,6 +54,19 @@ local function ZoneParts(block)
 	rule:SetHeight(1)
 	block.qcRule = rule
 
+	-- Hovering a heading: Blizzard's own highlight would paint the name its header gold on top of ours, so on a zone row
+	-- this block's highlight is the zone colour's lighter shade instead (an override on this pooled block only; it
+	-- passes quest rows, which reuse blocks, to Blizzard's).
+	local blizzardHighlight = block.UpdateHighlight
+	block.UpdateHighlight = function(self, ...)
+		if self.qcZone then
+			local color = T.ZoneColor()
+			T.PaintZone(self, self.isHighlighted and color.reverse or color)
+		elseif blizzardHighlight then
+			return blizzardHighlight(self, ...)
+		end
+	end
+
 	-- The whole row toggles, not just the words.
 	local button = block.HeaderButton
 	button:ClearAllPoints()
@@ -82,6 +96,59 @@ function T.PaintZone(block, color)
 	block.qcChevron:SetVertexColor(color.r, color.g, color.b)
 end
 
+------------------------------------------------------------------------------------------------------------------------
+-- Moonsilver zone names (Appearance page): the name in the moonlit header's silver over a faint moonlight, and a silver
+-- line under the heading that fades out to the right. The quest count keeps its colour.
+------------------------------------------------------------------------------------------------------------------------
+local function MoonParts(block)
+	if block.qcMoonHalo then
+		return
+	end
+	block.qcMoonHalo = block:CreateTexture(nil, "BACKGROUND", nil, -1)
+	block.qcMoonHalo:SetTexture(MEDIA .. "BackdropGlow")
+	block.qcMoonRule = block:CreateTexture(nil, "BACKGROUND")
+	block.qcMoonRule:SetHeight(1)
+end
+
+-- Styles the heading for Moonglow, or hides Moonglow's parts; returns true while Moonglow styles it (its own line under
+-- the heading is then not wanted). With My colour picked for zone names (Appearance page) the heading stays plain.
+local function StyleMoonZone(block, room)
+	if Q.Look("lookZones") ~= "silver" then
+		if block.qcMoonHalo then
+			block.qcMoonHalo:Hide()
+			block.qcMoonRule:Hide()
+		end
+		return false
+	end
+	MoonParts(block)
+	local strength = Q.Frame.MoonStrength()
+	local text = block.HeaderText
+	-- Kept faint, so the name reads clearly over it.
+	local moon = Q.Frame.MOON
+	local halo = block.qcMoonHalo
+	halo:SetVertexColor(moon.halo[1], moon.halo[2], moon.halo[3], moon.haloAlpha * strength)
+	halo:ClearAllPoints()
+	halo:SetPoint("LEFT", text, "LEFT", -8, 0)
+	halo:SetSize(math.max(0, math.min(text:GetStringWidth() or 0, room)) + moon.haloPad, moon.haloHeight)
+	halo:Show()
+	local rule = block.qcMoonRule
+	Q.Fade(rule, "HORIZONTAL", moon.rule, 0.3 + 0.25 * strength, 0)
+	rule:ClearAllPoints()
+	rule:SetPoint("TOPLEFT", text, "BOTTOMLEFT", -ZONE_OFFSET_X + 4, -4)
+	rule:SetPoint("RIGHT", block, "RIGHT")
+	rule:Show()
+	return true
+end
+
+-- The zone names' colour (Appearance page): moonsilver (a little lighter while hovered), or the Colours page's colour.
+-- Hovering uses its `reverse`.
+function T.ZoneColor()
+	if Q.Look("lookZones") == "silver" then
+		return Q.Frame.MOON.zone
+	end
+	return Q.Color("colorZone")
+end
+
 -- While searching, every zone in the list is open (it has matches) and its count reads matches/total.
 function T.StyleZone(block, group)
 	local db = Q.db
@@ -93,7 +160,13 @@ function T.StyleZone(block, group)
 	block:AdjustRightEdgeOffset(-ZONE_COUNT_WIDTH - (searching and 16 or 0))
 	Q.Font(block.HeaderText, math.max(db.zoneSize, db.fontSize + 1))
 	block:SetHeader(db.searchZones and T.MarkSearch(group.name) or group.name)
-	local zoneColor = Q.Color("colorZone")
+	-- Moonsilver or the player's own colour (Zone names, Appearance page).
+	local silver = Q.Look("lookZones") == "silver"
+	local zoneColor = T.ZoneColor()
+	-- The arrow's art is gold; greyed first, it takes Moonglow's silver.
+	if block.qcChevron.SetDesaturated then
+		block.qcChevron:SetDesaturated(silver)
+	end
 	local color = block.isHighlighted and zoneColor.reverse or zoneColor
 	block.qcRule:SetColorTexture(zoneColor.r, zoneColor.g, zoneColor.b, RULE_ALPHA)
 	block.height = block.height + 7
@@ -117,7 +190,13 @@ function T.StyleZone(block, group)
 	block.qcRule:ClearAllPoints()
 	block.qcRule:SetPoint("TOPLEFT", block.HeaderText, "BOTTOMLEFT", -ZONE_OFFSET_X + 4, -4)
 	block.qcRule:SetPoint("RIGHT", block, "RIGHT")
-	block.qcRule:Show()
+	-- The room between the name's start and the count, for Moonglow's moonlight behind the name.
+	local width = block:GetWidth()
+	if not width or width <= 0 then
+		width = (Q.Frame.content and Q.Frame.content:GetWidth() or 0) - (block.offsetX or ZONE_OFFSET_X)
+	end
+	local room = width - ZONE_COUNT_WIDTH - (searching and 16 or 0) - 6
+	block.qcRule:SetShown(not StyleMoonZone(block, room))
 end
 
 ------------------------------------------------------------------------------------------------------------------------

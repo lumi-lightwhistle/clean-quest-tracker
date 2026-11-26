@@ -626,7 +626,7 @@ end
 
 function M:OnBlockHeaderEnter(block)
 	if block.qcZone then
-		T.PaintZone(block, Q.Color("colorZone").reverse)
+		T.PaintZone(block, T.ZoneColor().reverse)
 		return
 	end
 	if block.qcTitleHi then
@@ -642,7 +642,7 @@ end
 
 function M:OnBlockHeaderLeave(block)
 	if block.qcZone then
-		T.PaintZone(block, Q.Color("colorZone"))
+		T.PaintZone(block, T.ZoneColor())
 		return
 	end
 	if block.qcTitle then
@@ -661,6 +661,10 @@ function M:OnFreeBlock(block)
 	Q.Party.Detach(block)
 	if block.qcRule then
 		block.qcRule:Hide()
+	end
+	if block.qcMoonHalo then
+		block.qcMoonHalo:Hide()
+		block.qcMoonRule:Hide()
 	end
 	block.qcItemIndex = nil
 	block.qcTitle, block.qcTitleHi, block.qcZone, block.qcGroup = nil, nil, nil, nil
@@ -698,6 +702,7 @@ function M:QCObjectives(block, questID, logIndex, isComplete, isSequenced, isExi
 					line = AddLine(block, index, text, hideDash, done)
 					if not line.state or line.state == S.Present then
 						line:SetState(S.Completing)
+						Q.Frame.MoonBloom(line)
 					end
 				end
 			elseif finished then
@@ -707,6 +712,7 @@ function M:QCObjectives(block, questID, logIndex, isComplete, isSequenced, isExi
 					line = AddLine(block, index, text, hideDash, done)
 					if not line.state or line.state == S.Present then
 						line:SetState(S.Completing)
+						Q.Frame.MoonBloom(line)
 					end
 				elseif not isSequenced then
 					line = AddLine(block, index, text, hideDash, done)

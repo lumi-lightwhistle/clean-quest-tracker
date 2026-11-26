@@ -10,7 +10,7 @@ CleanQuestTracker = Q
 
 Q.name = ADDON
 Q.version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version")) or "dev"
-Q.SCHEMA = 6
+Q.SCHEMA = 7
 
 Q.defaults = {
 	enabled = true,
@@ -59,20 +59,17 @@ Q.defaults = {
 	padding = 6, -- extra room between the list and the edge of the background or border (only while one shows)
 	rounded = true, -- round the background's corners (the border follows them)
 	cornerSize = 10, -- their radius (range in FrameBorder.lua, F.BACKDROP_LIMITS)
-	-- bronze border around the frame (UI/FrameBorder.lua)
+	-- the border around the frame (UI/FrameBorder.lua); the Appearance page's Frame group turns it on
 	border = false,
 	borderWeight = "fine", -- line weight: "fine", "standard" or "heavy"
-	borderFinish = "polished", -- "polished", "aged" or "dark"
-	borderFlourish = false, -- corner flourishes, while the border is on
-	flourishSize = 1, -- their size, and the crest's
-	borderCrest = false, -- a small crest centred on the top edge
+	flourishSize = 1, -- the bronze flourishes' size, and the bronze crest's
 	-- colours (hex, without #); the defaults are the game's own tracker colours
-	colorZone = "d9b04a",
+	colorZone = "d9b04a", -- zone names while lookZones is "mine"
 	colorCount = "ede6d6", -- the number of quests at the right of a zone heading
 	colorTitle = "ffd100", -- titles while difficulty colours are off
 	colorObjective = "cccccc",
 	colorDone = "1aff1a",
-	colorBar = "1f9eff",
+	colorBar = "1f9eff", -- progress bars while lookBarColour is "mine"
 	colorBadge = "d9b86e",
 	boldZones = false,
 	-- search (the search text itself is never saved; it starts empty each session)
@@ -82,7 +79,30 @@ Q.defaults = {
 	-- extras (optional; off until a player turns them on)
 	superFocus = false, -- show the focus mode target button in the Quests bar
 	focusQuest = false, -- the target button is lit (focus mode; only counts while superFocus is on)
-	bgTheme = "current", -- Experimental: the Background's theme, "current" (the plain panel) or "moonglow"
+	-- the look (Appearance page). A theme is a preset for the look's settings below (Q.THEMES); "custom" is the
+	-- player's own mix, kept in lookCustom (not a default) with lookFrom, the theme it started from. A theme never
+	-- changes the frame (background, border, their shape and darkness) or anything on another page. The defaults are
+	-- the Classic theme, the look the tracker always had. Trying a theme (Q.TryTheme) is never saved.
+	theme = "classic", -- "classic", "moonglow" or "custom"
+	lookFrom = "classic", -- the theme a custom look started from
+	lookBuilder = false, -- the Appearance page shows every part of the look (the builder); off, just a summary
+	lookTitle = "gold", -- the Quests bar: "gold" (the game's own bar) or "moonlit" (a silver title over a starred rule)
+	lookZones = "mine", -- zone names: "mine" (the Colours page's colour) or "silver"
+	moonSky = "plain", -- the Background's colours: "plain", "twilight", "midnight" or "tide"
+	moonStars = false, -- twinkling stars on the Background
+	moonShooting = false,
+	moonAurora = false,
+	moonMist = false,
+	moonBeam = false, -- a shaft of light that sweeps slowly across the Background
+	borderFinish = "polished", -- the Border's metal: "polished", "aged" or "dark" bronze, or "moonsilver"
+	borderOrnament = "none", -- at each corner: "none", "flourish" (bronze) or a moonlit accent: "star", "bracket",
+	-- "constellation", "leaf" or "edge"
+	lookCrest = "none", -- on the top edge: "none", "diamond" (bronze), "crescent" or "tonight" (the real moon's phase)
+	moonGleam = "off", -- light on the border: "off", "tide" (a soft wash flowing round it) or "sweep" (a slanted shaft)
+	lookBarColour = "mine", -- progress bars: "mine" (the Colours page's), or one of Q.BAR_COLOURS
+	moonBars = "flat", -- the light on progress bars: "flat", "crescent", "eclipse", "tide" or "glass" (Progress.lua)
+	moonBloom = false, -- a ring of light when an objective finishes
+	moonGlow = 0.45, -- strength of every glow in the look
 	point = "TOPRIGHT",
 	x = -70,
 	y = -220,
@@ -97,6 +117,35 @@ Q.PRESETS = {
 }
 -- The values a preset decides, in a fixed order.
 Q.PRESET_KEYS = { "fontSize", "zoneSize", "spacing", "questGap", "zoneGap", "indent", "poiIndent", "barGap", "poiSize" }
+
+-- The look's settings a theme sets, in a fixed order, and the values each choice may take (a saved value outside them
+-- falls back to the default in LoadSettings). Adding a theme: add its options here and in OptionsPages.lua, its art
+-- where each part is drawn, and a preset in Q.THEMES.
+Q.LOOK_KEYS = { "lookTitle", "lookZones", "moonSky", "moonStars", "moonShooting", "moonAurora", "moonMist", "moonBeam",
+	"borderFinish", "borderOrnament", "lookCrest", "moonGleam", "lookBarColour", "moonBars", "moonBloom", "moonGlow" }
+Q.LOOK_CHOICES = {
+	lookTitle = { gold = true, moonlit = true },
+	lookZones = { mine = true, silver = true },
+	moonSky = { plain = true, twilight = true, midnight = true, tide = true },
+	borderFinish = { polished = true, aged = true, dark = true, moonsilver = true },
+	borderOrnament = { none = true, flourish = true, star = true, bracket = true, constellation = true, leaf = true,
+		edge = true },
+	lookCrest = { none = true, diamond = true, crescent = true, tonight = true },
+	moonGleam = { off = true, tide = true, sweep = true },
+	lookBarColour = { mine = true, moonsilver = true, lilac = true, seafoam = true, amber = true, rose = true },
+	moonBars = { flat = true, crescent = true, eclipse = true, tide = true, glass = true },
+}
+-- The theme colours a progress bar can take besides the player's own.
+Q.BAR_COLOURS = { moonsilver = "c8d4ff", lilac = "a78bfa", seafoam = "2ee6b4", amber = "ffb347", rose = "ff4d6d" }
+Q.THEMES = {
+	classic = { lookTitle = "gold", lookZones = "mine", moonSky = "plain", moonStars = false, moonShooting = false,
+		moonAurora = false, moonMist = false, moonBeam = false, borderFinish = "polished", borderOrnament = "none",
+		lookCrest = "none", moonGleam = "off", lookBarColour = "mine", moonBars = "flat", moonBloom = false, moonGlow = 0.45 },
+	moonglow = { lookTitle = "moonlit", lookZones = "silver", moonSky = "midnight", moonStars = true, moonShooting = true,
+		moonAurora = false, moonMist = false, moonBeam = false, borderFinish = "moonsilver", borderOrnament = "edge",
+		lookCrest = "crescent", moonGleam = "tide", lookBarColour = "moonsilver", moonBars = "tide", moonBloom = true,
+		moonGlow = 0.7 },
+}
 
 local db
 
@@ -126,13 +175,51 @@ function Q.Readable(value)
 	return value ~= nil
 end
 
+-- Shades a texture from one colour to another ("VERTICAL": bottom to top; "HORIZONTAL": left to right), each colour
+-- with its opacity. Returns false, leaving the texture as it was, when the client refuses it; a client whose very first
+-- gradient fails isn't asked again. Every gradient in the add-on goes through here. The two colour objects are
+-- reused: SetGradient copies their values, so shading on every frame makes no new tables.
+local gradientFrom, gradientTo
+local gradientsRefused, gradientsWork = false, false
+function Q.Gradient(texture, orientation, r1, g1, b1, a1, r2, g2, b2, a2)
+	if gradientsRefused or not CreateColor then
+		return false
+	end
+	if not gradientFrom then
+		gradientFrom, gradientTo = CreateColor(0, 0, 0, 1), CreateColor(0, 0, 0, 1)
+	end
+	gradientFrom:SetRGBA(r1, g1, b1, a1)
+	gradientTo:SetRGBA(r2, g2, b2, a2)
+	if pcall(texture.SetGradient, texture, orientation, gradientFrom, gradientTo) then
+		gradientsWork = true
+		return true
+	end
+	gradientsRefused = not gradientsWork
+	return false
+end
+
+-- Show and hide a texture that remembers whether it shows (qcOn), so showing what shows or hiding what is hidden costs
+-- nothing: for pieces drawn frame after frame (the look's moving parts, the light on bars). Such a texture must only be
+-- shown and hidden through these.
+function Q.ShowPart(texture)
+	if not texture.qcOn then
+		texture:Show()
+		texture.qcOn = true
+	end
+end
+
+function Q.HidePart(texture)
+	if texture.qcOn then
+		texture:Hide()
+		texture.qcOn = nil
+	end
+end
+
 -- Paints a texture with a gradient in one colour, from one opacity to another. Falls back to the average opacity if
 -- the client refuses the gradient call.
 function Q.Fade(texture, orientation, color, fromAlpha, toAlpha)
 	texture:SetColorTexture(1, 1, 1, 1)
-	local ok = CreateColor and pcall(texture.SetGradient, texture, orientation,
-		CreateColor(color[1], color[2], color[3], fromAlpha), CreateColor(color[1], color[2], color[3], toAlpha))
-	if not ok then
+	if not Q.Gradient(texture, orientation, color[1], color[2], color[3], fromAlpha, color[1], color[2], color[3], toAlpha) then
 		texture:SetColorTexture(color[1], color[2], color[3], (fromAlpha + toAlpha) / 2)
 	end
 end
@@ -179,20 +266,25 @@ local function ParseHex(hex)
 	return tonumber(r, 16) / 255, tonumber(g, 16) / 255, tonumber(b, 16) / 255
 end
 
--- The colour for a colour setting (colorZone, colorBar...), as a table with r, g, b and a `reverse` (the lighter
--- shade Blizzard's line code uses while the mouse is over a quest).
+-- A colour from its hex, as a table with r, g, b and a `reverse` (the lighter shade Blizzard's line code uses while the
+-- mouse is over a quest); nil for a hex that can't be read.
+function Q.ColorOf(hex)
+	local r, g, b = ParseHex(hex)
+	if not r then
+		return nil
+	end
+	return { r = r, g = g, b = b, hex = hex, reverse = { r = r + (1 - r) * 0.35, g = g + (1 - g) * 0.35, b = b + (1 - b) * 0.35 } }
+end
+
+-- The colour for a colour setting (colorZone, colorBar...), as Q.ColorOf makes it.
 function Q.Color(key)
 	local hex = Q.db and Q.db[key] or Q.defaults[key]
 	local cached = colorCache[key]
 	if cached and cached.hex == hex then
 		return cached
 	end
-	local r, g, b = ParseHex(hex)
-	if not r then
-		r, g, b = ParseHex(Q.defaults[key])
-	end
-	local color = { r = r, g = g, b = b, hex = hex }
-	color.reverse = { r = r + (1 - r) * 0.35, g = g + (1 - g) * 0.35, b = b + (1 - b) * 0.35 }
+	local color = Q.ColorOf(hex) or Q.ColorOf(Q.defaults[key])
+	color.hex = hex
 	colorCache[key] = color
 	return color
 end
@@ -410,9 +502,73 @@ local function Migrate(saved)
 				saved.poiIndent = math.max(0, start + saved.indent - room)
 			end
 		end
+		if schema < 7 then
+			-- Test builds of the Themes page saved some settings in other shapes; bring them to this version's.
+			if type(saved.moonBeam) == "string" then
+				saved.moonBeam = saved.moonBeam ~= "off" -- was "off", "sweep" or "lantern"
+			end
+			if saved.moonGlint ~= nil and saved.moonGleam == nil then
+				saved.moonGleam = saved.moonGlint == true and "tide" or "off" -- the travelling glint became the border light
+			end
+			if saved.moonBars == "sheen" then
+				saved.moonBars = "glass"
+			end
+			-- Themes arrived. Corner flourishes and the crest were switches; they are choices now.
+			if saved.borderFlourish == true then
+				saved.borderOrnament = "flourish"
+			end
+			if saved.borderCrest == true then
+				saved.lookCrest = "diamond"
+			end
+			saved.borderFlourish, saved.borderCrest = nil, nil
+			-- Fills in Moonglow's look for every part not saved yet.
+			local function Moonglow()
+				for key, value in pairs(Q.THEMES.moonglow) do
+					if saved[key] == nil then
+						saved[key] = value
+					end
+				end
+				saved.theme, saved.lookFrom = "moonglow", "moonglow"
+			end
+			-- The Extras page's background theme became Moonglow. It only showed with the Background on; those players
+			-- get Moonglow, keeping their own bronze if they had a border (the old theme only coloured the background).
+			-- Every save already holds a finish (older versions saved the defaults too), so it is decided here.
+			if saved.theme == nil and saved.bgTheme == "moonglow" and saved.backdrop then
+				if not saved.border then
+					saved.borderFinish = "moonsilver"
+				end
+				Moonglow()
+			end
+			saved.bgTheme = nil
+			-- Test builds of the Themes page saved Moonglow with its own settings; carry their picks over.
+			if saved.theme == "moonglow" and saved.lookTitle == nil then
+				saved.lookTitle = "moonlit"
+				saved.lookZones = saved.themeZoneColour == false and "mine" or "silver"
+				saved.lookBarColour = "moonsilver"
+				if saved.moonBorder ~= "bronze" then
+					saved.borderFinish = "moonsilver"
+				end
+				-- A choice turned off stays off (Moonglow() below would otherwise fill in its own).
+				if type(saved.moonCorners) == "string" then
+					saved.borderOrnament = saved.moonCorners ~= "off" and saved.moonCorners or saved.borderOrnament or "none"
+				end
+				if type(saved.moonCrest) == "string" then
+					saved.lookCrest = ({ crescent = "crescent", live = "tonight" })[saved.moonCrest] or saved.lookCrest or "none"
+				end
+				Moonglow()
+			end
+			for _, key in ipairs({ "moonPreset", "moonCustom", "moonBorder", "moonCorners", "moonCrest", "themeZoneColour",
+				"moonGlint", "moonHeader", "moonShape", "moonZones", "moonLine", "moonTake", "moonglow", "moonChips",
+				"moonBullets", "moonHover" }) do
+				saved[key] = nil
+			end
+		end
 	end
 	saved.schema = Q.SCHEMA
 end
+
+-- For the offline tests (tests/test_theme.lua).
+Q._internal = { Migrate = Migrate }
 
 local function LoadSettings()
 	-- The add-on was called Quest Companion, then Simple Quest Tracker, and saved its settings under those names. If
@@ -445,6 +601,19 @@ local function LoadSettings()
 	if db.animSpeed == "relaxed" or not Q.Motion.SPEEDS[db.animSpeed] then
 		db.animSpeed = "smooth"
 	end
+	-- A look value of the wrong kind, or a choice this version doesn't have, falls back to the default.
+	for _, key in ipairs(Q.LOOK_KEYS) do
+		if not Q.LookValueOK(key, db[key]) then
+			db[key] = Q.defaults[key]
+		end
+	end
+	db.moonGlow = math.max(0, math.min(1, db.moonGlow))
+	db.lookCustom = type(db.lookCustom) == "table" and db.lookCustom or nil
+	if not Q.THEMES[db.lookFrom] then
+		db.lookFrom = "classic"
+	end
+	-- Name the theme the look matches (a hand-edited or unknown name included), or Custom.
+	Q.UpdateThemeName()
 	-- Settings from before presets existed: name the preset they match, or Custom if they were changed by hand.
 	if db.preset ~= "compact" then
 		Q.UpdatePresetName()
@@ -488,11 +657,117 @@ function Q.UpdatePresetName()
 	db.preset = "custom"
 end
 
+-- Whether `value` is one a look setting can take: the default's kind, and a choice this version has.
+function Q.LookValueOK(key, value)
+	local choices = Q.LOOK_CHOICES[key]
+	return type(value) == type(Q.defaults[key]) and (not choices or choices[value]) and true or false
+end
+
+-- Puts a theme's look in place ("custom" brings back the player's own mix, if there is one), ending any try.
+function Q.ApplyTheme(name)
+	local look = Q.THEMES[name] or (name == "custom" and db.lookCustom)
+	if not look then
+		return
+	end
+	-- A kept mix only brings back values of the right kind (the saved file may have been edited by hand).
+	for _, key in ipairs(Q.LOOK_KEYS) do
+		if Q.LookValueOK(key, look[key]) then
+			db[key] = look[key]
+		end
+	end
+	-- Custom keeps the theme it started from (lookFrom); a theme becomes the one a new mix would start from.
+	db.theme = name
+	Q.trial = nil
+	Q.UpdateThemeName()
+	Q.Apply(true)
+end
+
+-- After a look setting changes by hand: the theme it still matches, or "custom", whose mix is kept (lookCustom) so the
+-- Custom card can bring it back after trying or using a theme.
+function Q.UpdateThemeName()
+	for name, look in pairs(Q.THEMES) do
+		local same = true
+		for _, key in ipairs(Q.LOOK_KEYS) do
+			if db[key] ~= look[key] then
+				same = false
+				break
+			end
+		end
+		if same then
+			db.theme = name
+			return
+		end
+	end
+	if db.theme ~= "custom" and Q.THEMES[db.theme] then
+		db.lookFrom = db.theme
+	end
+	db.theme = "custom"
+	db.lookCustom = {}
+	for _, key in ipairs(Q.LOOK_KEYS) do
+		db.lookCustom[key] = db[key]
+	end
+end
+
+-- Trying a theme: Q.trial = { theme, frame } shows that theme's look (and, with `frame`, a background and border the
+-- player hasn't turned on) until it is kept or ended. It is never saved: closing the settings window or /reload ends it.
+Q.trial = nil
+
+-- The theme on show: the one being tried, or the saved one ("custom" included).
+function Q.Theme()
+	return Q.trial and Q.trial.theme or (db and db.theme) or Q.defaults.theme
+end
+
+-- A look setting as it shows: the tried theme's while trying, otherwise the saved one. Everything that draws the look
+-- reads it through here.
+function Q.Look(key)
+	local trial = Q.trial and Q.THEMES[Q.trial.theme]
+	if trial and trial[key] ~= nil then
+		return trial[key]
+	end
+	local value = db and db[key]
+	if value == nil then
+		return Q.defaults[key]
+	end
+	return value
+end
+
+function Q.TryTheme(theme)
+	if not Q.THEMES[theme] or theme == db.theme then
+		Q.trial = nil
+	else
+		Q.trial = { theme = theme, frame = not Q.trial or Q.trial.frame }
+	end
+	Q.Apply(true)
+end
+
+-- Ends a try. `keep` puts the tried theme's look in place; the background and border it borrowed are not kept.
+function Q.EndTrial(keep)
+	if not Q.trial then
+		return
+	end
+	local theme = Q.trial.theme
+	Q.trial = nil
+	if keep then
+		Q.ApplyTheme(theme)
+	else
+		Q.Apply(true)
+	end
+end
+
+function Q.SetTrialFrame(on)
+	if Q.trial then
+		Q.trial.frame = on and true or false
+		Q.Apply(true)
+	end
+end
+
 -- Restores every setting, including frame size and position, and unfolds every zone.
 function Q.ResetSettings()
+	Q.trial = nil
 	for key, value in pairs(Q.defaults) do
 		db[key] = value
 	end
+	db.lookCustom = nil
 	db.collapsed = {}
 	db.collapsedBeforeFocus = nil
 	Q.Apply()

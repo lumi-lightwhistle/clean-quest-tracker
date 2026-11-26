@@ -9,11 +9,13 @@ local F = {}
 Q.Frame = F
 
 local HEADER_HEIGHT = 26
+F.HEADER_HEIGHT = HEADER_HEIGHT -- the Quests bar's height (Moonglow's aurora starts under it)
 local SCROLLBAR_WIDTH = 8
 local SCROLLBAR_GAP = 4 -- breathing room between the quest list and the scrollbar
 local MIN_WIDTH, MAX_WIDTH = 220, 700
 local MIN_HEIGHT, MAX_HEIGHT = 120, 1200
 local GOLD = { r = 1, g = 0.82, b = 0 }
+F.TITLE_GOLD = GOLD -- the Quests title's colour with the Gold bar title (FrameMoonglow.lua puts it back)
 local EDGE = { r = 0.85, g = 0.69, b = 0.29 }
 local BRIGHT = { r = 1, g = 0.93, b = 0.55 }
 local MEDIA = "Interface\\AddOns\\CleanQuestTracker\\Media\\"
@@ -127,6 +129,7 @@ local function ScrollTo(value, gliding)
 	end
 	value = Clamp(value, 0, ScrollRange())
 	scroll:SetVerticalScroll(value)
+	F.MoonViewChanged() -- bars scrolled into view start their light at once
 	if math.abs((slider:GetValue() or 0) - value) > 0.5 then
 		syncing = true
 		slider:SetValue(value)
@@ -392,6 +395,8 @@ local function CreateHeader()
 	title:SetTextColor(GOLD.r, GOLD.g, GOLD.b)
 	title:SetWordWrap(false)
 	header.title = title
+	header.art = art -- the game's bar art, which Moonglow's moonlit header replaces
+	F.header = header
 
 	local minimize = CreateFrame("Button", nil, header)
 	minimize:SetSize(16, 16)
@@ -516,8 +521,8 @@ local function CreateHeader()
 end
 
 -- Settings highlight for the parts of the frame itself: the focus mode button or the search box. Other keys clear
--- it. (The General page's window and backdrop settings shade nothing: they change the whole frame, which is plain
--- to see.)
+-- it. (The General page's window settings and the Appearance page's frame and theme settings shade nothing: they
+-- change the whole frame, which is plain to see.)
 local highlight
 function F.SetHighlight(key)
 	if not host then
@@ -817,7 +822,7 @@ function F.Apply()
 	local unlocked = not db.locked
 	-- The Background switch shows the dark panel at its chosen darkness; while unlocked it always shows, so the frame's
 	-- full size is visible while moving and resizing.
-	local darkness = db.backdrop and db.opacity or 0
+	local darkness = F.PanelDarkness()
 	F.PaintBackdrop(unlocked and math.max(darkness, 0.35) or darkness)
 	strip:SetShown(unlocked)
 	grip:SetShown(unlocked)

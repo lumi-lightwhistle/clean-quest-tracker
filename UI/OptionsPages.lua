@@ -1,12 +1,14 @@
 -- Clean Quest Tracker: what each page of the settings window holds. Options.lua draws the window and the controls;
 -- this file only lists them. Each page is a name, a short note, and groups of rows: { label, side note, rows }.
--- A row's first entry picks the control (toggle, slider, choice, colour, card, presets, badges, themes, inset, notice;
--- `card` is a colour as a card, two to a line, on the Colours page); `k` is the setting it changes and `hl` the part
--- of the tracker shaded while it's hovered (the General page's rows shade nothing: they change the whole frame).
+-- A row's first entry picks the control (toggle, slider, choice, drop, colour, card, presets, badges, themes, summary,
+-- inset, notice; `card` is a colour as a card, two to a line, on the Colours page; `drop` is a choice as a dropdown
+-- list, for choices too many to fit side by side; `summary` is a live line of text from spec.text); `k` is the setting
+-- it changes and `hl` the part of the tracker shaded while it's hovered (the General page's and the Appearance page's
+-- frame and theme rows shade nothing: they change the whole frame).
 -- Other row options:
 --   rebuild      redraw the whole list after a change (toggle, slider, choice)
 --   min max step format   a slider's range, step and how its value is written
---   options      a choice's { value, label } pairs
+--   options      a choice's or a drop's { value, label } pairs
 --   get, set     a toggle that mirrors something that isn't a saved setting here (the game's questPOI)
 --   onEnable     a toggle's extra work when it is switched on
 --   icon         a toggle's texture, drawn before its label
@@ -17,17 +19,22 @@
 --                and the note for each side (`note` is not used). While it's on, the palette gives way to the
 --                difficulty colours (Quest titles only)
 -- A group can carry `button = { label, run }`, a small button at the right of its label line (Reset colours); such a
--- group has no side note, which would sit under the button.
+-- group has no side note, which would sit under the button. A group with `variant` is one of two alternatives that take
+-- the same place on the page: "builder" (the Appearance page's look sections, shown while lookBuilder is on) or
+-- "summary" (shown while it is off). These groups come last on their page.
 -- A row that only matters while another setting is set carries `enabledBy` (a saved switch that must be on) or
--- `enabledWhen` (a function), plus `needs`, the line shown when it is hovered while greyed out. These apply to rows
--- that are controls; notes ignore them.
+-- `enabledWhen` (a function), plus `needs`, the line shown when it is hovered while greyed out (a function when the
+-- reason can differ). These apply to rows that are controls; notes ignore them.
 --
 -- A page with `sectionLinks` lists its named groups under its button in the side column, as links that jump to them
 -- (while the Show sections switch at the foot of that column is on; that switch is drawn in Options.lua, the one
 -- setting not listed here).
 --
 -- How the pages are split:
---   General  the add-on itself and its window
+--   General     the add-on itself and its window
+--   Appearance  how the tracker looks: a theme (a preset for the look, which can be tried first), the frame (whether
+--               there is a background and a border, and their shape: never set by a theme), and the builder, every
+--               part of the look, opt-in. Every other page is about what the tracker shows and how it behaves.
 --   Quests   what the tracker shows, and in what order
 --   Layout   sizes and spacing; the preset sets the groups marked as such
 --   Colours, Party, Search, Animations  as the names say
@@ -69,8 +76,83 @@ local function Rounded()
 	return Framed() and Q.db.rounded
 end
 
+-- What shows on the tracker right now, a borrowed background or border included while a theme is being tried.
+local ShowsPanel, ShowsBorder = Q.Frame.ShowsPanel, Q.Frame.ShowsBorder
+
+-- The bronze flourish size matters while the bronze flourishes or the bronze crest show.
 local function Ornamented()
-	return Q.db.border and (Q.db.borderFlourish or Q.db.borderCrest)
+	return ShowsBorder() and (Q.db.borderOrnament == "flourish" or Q.db.lookCrest == "diamond")
+end
+
+-- The look's choices (Appearance page): { value, label }. A theme's own option says which theme it comes from.
+local LOOK_OPTIONS = {
+	lookTitle = { { "gold", "Gold bar" }, { "moonlit", "Moonlit silver" } },
+	lookZones = { { "mine", "My colour" }, { "silver", "Moonsilver" } },
+	moonSky = { { "plain", "Plain dark (Classic)" }, { "twilight", "Twilight (Moonglow)" }, { "midnight", "Midnight (Moonglow)" },
+		{ "tide", "Deep tide (Moonglow)" } },
+	borderFinish = { { "polished", "Polished bronze (Classic)" }, { "aged", "Aged bronze (Classic)" },
+		{ "dark", "Dark bronze (Classic)" }, { "moonsilver", "Moonsilver (Moonglow)" } },
+	borderOrnament = { { "none", "None" }, { "flourish", "Bronze flourishes (Classic)" }, { "star", "Starpoint (Moonglow)" },
+		{ "bracket", "Silver bracket (Moonglow)" }, { "constellation", "Constellation (Moonglow)" },
+		{ "leaf", "Moonleaf (Moonglow)" }, { "edge", "Moonlit edge (Moonglow)" } },
+	lookCrest = { { "none", "None" }, { "diamond", "Bronze diamond (Classic)" }, { "crescent", "Crescent moon (Moonglow)" },
+		{ "tonight", "Tonight's moon (Moonglow)" } },
+	moonGleam = { { "off", "Off" }, { "tide", "Moonlit tide" }, { "sweep", "Polished sweep" } },
+	lookBarColour = { { "mine", "My colour (Colours page)" }, { "moonsilver", "Moonsilver (Moonglow)" }, { "lilac", "Lilac" },
+		{ "seafoam", "Seafoam" }, { "amber", "Amber" }, { "rose", "Rose" } },
+	moonBars = { { "flat", "Flat" }, { "crescent", "Crescent tip" }, { "eclipse", "Eclipse" }, { "tide", "Moontide" },
+		{ "glass", "Polished glass" } },
+}
+
+local function LookLabel(key, value)
+	for _, option in ipairs(LOOK_OPTIONS[key] or {}) do
+		if option[1] == value then
+			return (option[2]:gsub(" %(.*%)$", ""))
+		end
+	end
+	return tostring(value)
+end
+
+-- A short description of a look: `look` (a table of look settings, such as the kept Custom mix), or the look on show.
+-- `short` gives a few lines for a theme card; otherwise one paragraph for the Appearance page's summary.
+function O.LookSummary(look, short)
+	local function Get(key)
+		local value
+		if look then
+			value = look[key]
+		else
+			value = Q.Look(key)
+		end
+		-- A hand-edited mix may hold a value this version doesn't know.
+		if not Q.LookValueOK(key, value) then
+			return Q.defaults[key]
+		end
+		return value
+	end
+	local sky = LookLabel("moonSky", Get("moonSky")) .. " sky"
+	local effects = {}
+	for _, part in ipairs({ { "moonStars", "stars" }, { "moonShooting", "shooting stars" }, { "moonAurora", "aurora" },
+		{ "moonMist", "mist" }, { "moonBeam", "moonbeam" } }) do
+		if Get(part[1]) then
+			effects[#effects + 1] = part[2]
+		end
+	end
+	local border = LookLabel("borderFinish", Get("borderFinish"))
+	for _, part in ipairs({ { "borderOrnament", "none" }, { "lookCrest", "none" }, { "moonGleam", "off" } }) do
+		local value = Get(part[1])
+		if value ~= part[2] then
+			border = border .. ", " .. LookLabel(part[1], value):lower()
+		end
+	end
+	local bars = LookLabel("lookBarColour", Get("lookBarColour")) .. " bars, " .. LookLabel("moonBars", Get("moonBars")):lower()
+	if short then
+		return table.concat({ sky, border, bars }, "\n")
+	end
+	if #effects > 0 then
+		sky = sky .. " with " .. table.concat(effects, ", ")
+	end
+	return ("%s: %s title, %s zone names. %s. %s. %s."):format(Q.trial and "Trying" or "Your look", LookLabel("lookTitle", Get("lookTitle")):lower(),
+		LookLabel("lookZones", Get("lookZones")):lower(), sky, border, bars)
 end
 
 local TARGET_ICON = "Interface\\AddOns\\CleanQuestTracker\\Media\\FocusTarget" -- the Quests bar's focus mode button
@@ -81,6 +163,8 @@ local NEEDS_PARTY = "Turn on Show how many party members share each quest (Party
 local NEEDS_ICONS = "Turn on Show quest focus icons (Quests page) to use this"
 local NEEDS_FRAME = "Turn on Background or Border to use this"
 local NEEDS_BORDER = "Turn on Border to use this"
+local NEEDS_BACKGROUND = "Shows on your Background. Turn it on (Frame, above) to use this"
+local NEEDS_LINE = "Shows on your Border. Turn it on (Frame, above) to use this"
 
 local COLOUR_KEYS = { "colorZone", "colorCount", "colorTitle", "colorObjective", "colorDone", "colorBar", "colorBadge" }
 
@@ -102,22 +186,64 @@ O.PAGES = {
 				{ "slider", k = "width", label = "Width", note = "Long titles wrap to fit", min = 220, max = 700, step = 10 },
 				{ "slider", k = "maxHeight", label = "Maximum height", note = "The list scrolls past this", min = 120, max = 1200, step = 10 },
 			} },
-			{ "Background", nil, {
+		},
+	},
+	{
+		name = "Appearance",
+		note = "How the tracker looks",
+		tag = "New",
+		sectionLinks = true,
+		groups = {
+			{ "Theme", nil, {
+				{ "themes", label = "Theme", note = "A starting point for the whole look" },
+			} },
+			{ "Frame", "Always yours: themes never change these", {
 				{ "toggle", k = "backdrop", label = "Background", note = "A dark panel behind the list", onEnable = function()
 					Q.db.opacity = Q.defaults.opacity
 				end },
 				{ "slider", k = "opacity", label = "Background darkness", note = "How dark the panel is", min = 0.05, max = 1, step = 0.05, format = Percent, enabledBy = "backdrop", needs = "Turn on Background to use this" },
+				{ "toggle", k = "border", label = "Border", note = "A line round the list. Works with the background on or off" },
+				{ "choice", k = "borderWeight", label = "Line weight", note = "How thick the line is", options = { { "fine", "Fine" }, { "standard", "Standard" }, { "heavy", "Heavy" } }, enabledBy = "border", needs = NEEDS_BORDER },
 				{ "slider", k = "padding", label = "Padding", note = "Room between the list and the edge of the background or border", min = LIMITS.padding[1], max = LIMITS.padding[2], format = Pixels, enabledWhen = Framed, needs = NEEDS_FRAME },
 				{ "toggle", k = "rounded", label = "Rounded corners", note = "The border follows them", enabledWhen = Framed, needs = NEEDS_FRAME },
 				{ "slider", k = "cornerSize", label = "Corner size", note = "How round the corners are", min = LIMITS.cornerSize[1], max = LIMITS.cornerSize[2], format = Pixels, enabledWhen = Rounded, needs = "Turn on Rounded corners, and Background or Border, to use this" },
 			} },
-			{ "Border", "A bronze frame around the list", {
-				{ "toggle", k = "border", label = "Border", note = "Works with the background on or off" },
-				{ "choice", k = "borderWeight", label = "Line weight", note = "How thick the bronze line is", options = { { "fine", "Fine" }, { "standard", "Standard" }, { "heavy", "Heavy" } }, enabledBy = "border", needs = NEEDS_BORDER },
-				{ "choice", k = "borderFinish", label = "Finish", note = "Polished, aged or dark bronze", options = { { "polished", "Polished" }, { "aged", "Aged" }, { "dark", "Dark" } }, enabledBy = "border", needs = NEEDS_BORDER },
-				{ "toggle", k = "borderFlourish", label = "Corner flourishes", note = "Curls and leaves at each corner, reaching outward", enabledBy = "border", needs = NEEDS_BORDER },
-				{ "toggle", k = "borderCrest", label = "Crest on the header", note = "A small bronze diamond centred on the top edge", enabledBy = "border", needs = NEEDS_BORDER },
-				{ "slider", k = "flourishSize", label = "Flourish size", note = "Also sizes the crest", min = LIMITS.flourishSize[1], max = LIMITS.flourishSize[2], step = 0.05, format = Percent, enabledWhen = Ornamented, needs = "Turn on Border, and Corner flourishes or Crest on the header, to use this" },
+			{ "Build your own look", "Optional", {
+				{ "toggle", k = "lookBuilder", label = "Customise every part", note = "Off: the theme as it comes. On: change any part below; your mix becomes the Custom card" },
+			} },
+			{ "", nil, variant = "summary", {
+				{ "summary", text = function()
+					return O.LookSummary()
+				end },
+			} },
+			{ "Header and zones", "Shown with or without a background", variant = "builder", {
+				{ "choice", k = "lookTitle", label = "Title", note = "Gold bar: the game's own Quests bar. Moonlit silver: a silver title over a starred rule", options = LOOK_OPTIONS.lookTitle },
+				{ "choice", k = "lookZones", hl = "zfs", label = "Zone names", note = "My colour is the Zone headings colour on the Colours page", options = LOOK_OPTIONS.lookZones, enabledBy = "grouping", needs = NEEDS_ZONES },
+			} },
+			{ "Sky", "Drawn on your Background", variant = "builder", {
+				{ "drop", k = "moonSky", label = "Sky colours", note = "The colours of the panel behind the list", options = LOOK_OPTIONS.moonSky, enabledWhen = ShowsPanel, needs = NEEDS_BACKGROUND },
+				{ "toggle", k = "moonStars", label = "Stars", note = "Twinkle softly behind the list", enabledWhen = ShowsPanel, needs = NEEDS_BACKGROUND },
+				{ "toggle", k = "moonShooting", label = "Shooting stars", note = "One every few seconds", enabledWhen = ShowsPanel, needs = NEEDS_BACKGROUND },
+				{ "toggle", k = "moonAurora", label = "Aurora", note = "Soft curtains of light just under the header", enabledWhen = ShowsPanel, needs = NEEDS_BACKGROUND },
+				{ "toggle", k = "moonMist", label = "Moonwell mist", note = "Drifts along the bottom edge", enabledWhen = ShowsPanel, needs = NEEDS_BACKGROUND },
+				{ "toggle", k = "moonBeam", label = "Moonbeam", note = "A shaft of light sweeps slowly across the panel", enabledWhen = ShowsPanel, needs = NEEDS_BACKGROUND },
+			} },
+			{ "Border", "Drawn on your Border", variant = "builder", {
+				{ "drop", k = "borderFinish", label = "Metal", note = "The line's colour and shine", options = LOOK_OPTIONS.borderFinish, enabledWhen = ShowsBorder, needs = NEEDS_LINE },
+				{ "drop", k = "borderOrnament", label = "Corner ornaments", note = "Flourishes or moonlit accents at each corner; they follow your corner shape", options = LOOK_OPTIONS.borderOrnament, enabledWhen = ShowsBorder, needs = NEEDS_LINE },
+				{ "drop", k = "lookCrest", label = "Crest", note = "On the top edge. Tonight's moon follows the real moon; hover it for the phase", options = LOOK_OPTIONS.lookCrest, enabledWhen = ShowsBorder, needs = NEEDS_LINE },
+				{ "slider", k = "flourishSize", label = "Bronze ornament size", note = "The bronze flourishes and the bronze diamond", min = LIMITS.flourishSize[1], max = LIMITS.flourishSize[2], step = 0.05, format = Percent, enabledWhen = Ornamented, needs = function()
+					return ShowsBorder() and "Pick Bronze flourishes or the Bronze diamond to use this" or NEEDS_LINE
+				end },
+				{ "choice", k = "moonGleam", label = "Border light", note = "Moonlit tide: a soft wash of light flows round the border. Polished sweep: a slanted shaft of light crosses it every few seconds", options = LOOK_OPTIONS.moonGleam, enabledWhen = ShowsBorder, needs = NEEDS_LINE },
+			} },
+			{ "Progress bars", "Smooth or segmented, and thickness: Quests and Layout pages", variant = "builder", {
+				{ "drop", k = "lookBarColour", hl = "bars", label = "Bar colour", note = "Finished bars always take your Finished quests colour", options = LOOK_OPTIONS.lookBarColour, enabledBy = "bars", needs = NEEDS_BARS },
+				{ "drop", k = "moonBars", hl = "bars", label = "Bar effect", note = "Crescent tip: a moonlit point at the end. Eclipse: a dark core in a bright rim. Moontide: rolling waves of light. Polished glass: a passing gleam", options = LOOK_OPTIONS.moonBars, enabledBy = "bars", needs = NEEDS_BARS },
+			} },
+			{ "Finishing touches", "Moving effects follow the Animations page, and rest during combat", variant = "builder", {
+				{ "toggle", k = "moonBloom", label = "Lunar bloom", note = "A ring of light when an objective finishes" },
+				{ "slider", k = "moonGlow", label = "Glow strength", note = "Turns every glow in the look up or down", min = 0, max = 1, step = 0.05, format = Percent },
 			} },
 		},
 	},
@@ -179,7 +305,11 @@ O.PAGES = {
 		sectionLinks = true,
 		groups = {
 			{ "Text", nil, {
-				{ "card", k = "colorZone", hl = "zfs", label = "Zone headings", note = "Zone names, their arrows and the line under them", enabledBy = "grouping", needs = NEEDS_ZONES },
+				{ "card", k = "colorZone", hl = "zfs", label = "Zone headings", note = "Zone names, their arrows and the line under them, while Zone names is My colour (Appearance page)", enabledWhen = function()
+					return Q.db.grouping and Q.db.lookZones == "mine"
+				end, needs = function()
+					return Q.db.grouping and "Zone names are Moonsilver (Appearance page). Pick My colour there to use this" or NEEDS_ZONES
+				end },
 				{ "card", k = "colorCount", hl = "zcount", label = "Number of quests", note = "The count at the right of each zone heading", enabledBy = "grouping", needs = NEEDS_ZONES },
 				{ "card", k = "colorTitle", hl = "diff", label = "Quest titles", switch = { k = "difficulty", on = "By difficulty", off = "My colour", noteOn = "Each unfinished quest in its quest log colour", noteOff = "One colour for every unfinished quest" } },
 				{ "card", k = "colorObjective", hl = "obj", label = "Objectives", note = "The lines under each quest" },
@@ -192,7 +322,11 @@ O.PAGES = {
 				Q.db.difficulty = Q.defaults.difficulty
 			end } },
 			{ "Bars and badges", nil, {
-				{ "card", k = "colorBar", hl = "bars", label = "Progress bars", note = "The fill under counted objectives", enabledBy = "bars", needs = NEEDS_BARS },
+				{ "card", k = "colorBar", hl = "bars", label = "Progress bars", note = "The fill under counted objectives, while Bar colour is My colour (Appearance page)", enabledWhen = function()
+					return Q.db.bars and Q.db.lookBarColour == "mine"
+				end, needs = function()
+					return Q.db.bars and "Bars use a theme colour (Appearance page). Pick My colour there to use this" or NEEDS_BARS
+				end },
 				{ "card", k = "colorBadge", hl = "party", label = "Party badge", note = "The person icon; lighter once the whole party has the quest", enabledBy = "party", needs = NEEDS_PARTY },
 			} },
 		},
@@ -253,6 +387,7 @@ O.PAGES = {
 					{ "bullet", "The frame eases to its new height, and minimising rolls it up" },
 					{ "bullet", "Zone arrows turn, and header icons fade in on hover" },
 					{ "bullet", "New quests fade in, and finished quests flare green (or, when sorted to the top or bottom, fold and glide there)" },
+					{ "bullet", "Look effects (Appearance page): twinkling and shooting stars, aurora, mist, the moonbeam, the border light, the light on progress bars and the Lunar bloom" },
 					{ "label", "Always" },
 					{ "text", "Nothing animates during combat; the list snaps to its new layout instead. Progress bars always ease to their new value, and scrolling always glides, even on None (in combat the list can't scroll while a quest item button shows)." },
 				} },
@@ -268,9 +403,8 @@ O.PAGES = {
 					Q.db.focusQuest = false -- starts unlit each time, so the list never folds before the button is clicked
 				end, label = "Super focus mode", note = "Adds a target button to the Quests bar. Click it to turn focus mode on or off. While on, every quest except the one you focus (its round icon, or Focus in its right-click menu) folds down to its title" },
 			} },
-			{ "Experimental", "Try-outs", {
-				{ "notice", lead = "A playground for features that may come later.", text = "They may change, or go away, between versions." },
-				{ "themes", k = "bgTheme", label = "Themes", note = "Changes the tracker's background only", enabledBy = "backdrop", needs = "Turn on Background (General page) to use this" },
+			{ "", nil, {
+				{ "notice", lead = "Moonglow has moved.", text = "Themes are on the Appearance page now, under General." },
 			} },
 		},
 	},

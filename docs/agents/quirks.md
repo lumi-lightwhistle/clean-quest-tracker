@@ -43,8 +43,11 @@ Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this i
 ## Textures and fonts
 - TGAs: 32-bit, stored bottom-up (descriptor 8), white with alpha so the game can tint them. Exception: the border
   flourish and crest (`Media/BorderCorner*`, `BorderCrest*`) are coloured per finish by `tools/border.py`, since each
-  holds several colours (keep them in step with `FINISHES` in `UI/FrameBorder.lua`), and so are the Moonglow
-  stars (`BackdropStars`: two colours, so not tinted; tiled with REPEAT, so a power-of-two 128px).
+  holds several colours (keep them in step with `FINISHES` in `UI/FrameBorder.lua`), and so is `BackdropStars` (the
+  Appearance page's theme cards only: two colours, so not tinted; tiled with REPEAT, so a power-of-two 128px). Moonglow's
+  own art (`Media/Moon*`, drawn offline) is white with alpha and tinted in game, except the corner accents, the
+  crescent and the moon phase sheet; its tiled pieces (`MoonStars`, `MoonMist`, `MoonAurora`) are powers of two.
+  `BarWave` (Moontide's crest, tiled along a smooth progress bar) comes from `tools/border.py`.
 - Round shapes use circle masks or nine-slice. Overlapping see-through pieces stack visibly, so use solid premixed
   colours.
 - The game font (Friz) has no bold, and the OUTLINE flag adds a dark edge. Fake bold with a same-colour shadow
@@ -56,6 +59,13 @@ Each entry says what, then why. The short "Never" list is in `AGENTS.md`; this i
 Modern WoW Forever: warm charcoal, bronze (accent #DCA77F), a little teal (the settings window's rim, and the lit
 line under the search box while typing). Style reference: EllesmereUI's Forever theme (`STYLE` table in
 `AddOns\EllesmereUI\EllesmereUI.lua`).
+
+## Drawing cost
+- **Moving effects cost every frame.** The look's clock (`UI/FrameMoonglow.lua`) lays pieces out when the frame
+  changes size and per frame only changes what moves, draws slow effects about 30 times a second and quick ones at
+  most 60, and remembers what shows (`qcOn`) so nothing is hidden twice. Keep new effects to that pattern; the
+  budgets in `tests/test_drawing.lua` catch a slip. One gradient helper (`Q.Gradient`) reuses its colour objects, as
+  SetGradient copies their values; don't call `CreateColor` in anything that runs per frame or per layout.
 
 ## Windows and shell
 - Heredocs mangle backslashes in Lua paths (`\\`): write Python edit scripts to a file first.

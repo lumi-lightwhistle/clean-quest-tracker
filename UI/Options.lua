@@ -113,20 +113,55 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- Applying a change
 ------------------------------------------------------------------------------------------------------------------------
-local PRESET_KEY = {}
+local PRESET_KEY, LOOK_KEY = {}, {}
 for _, key in ipairs(Q.PRESET_KEYS) do
 	PRESET_KEY[key] = true
+end
+for _, key in ipairs(Q.LOOK_KEYS) do
+	LOOK_KEY[key] = true
+end
+
+local LayoutVariants -- defined with the window, below
+
+-- Applying a change redraws the whole tracker, and a slider being dragged changes its setting on every step, so changes
+-- are applied at once but then at most every APPLY_EVERY seconds; the last change always lands.
+local APPLY_EVERY = 0.05
+local applying, waiting, rebuildWaiting = false, false, false
+
+local function ApplyChange(rebuild)
+	if rebuild then
+		Q.Tracker.Rebuild()
+	end
+	Q.Apply(true)
+	O.Refresh()
+	applying = true
+	C_Timer.After(APPLY_EVERY, function()
+		applying = false
+		if waiting then
+			waiting = false
+			local again = rebuildWaiting
+			rebuildWaiting = false
+			ApplyChange(again)
+		end
+	end)
 end
 
 local function Changed(key, rebuild)
 	if PRESET_KEY[key] then
 		Q.UpdatePresetName()
 	end
-	if rebuild then
-		Q.Tracker.Rebuild()
+	if LOOK_KEY[key] then
+		Q.UpdateThemeName()
 	end
-	Q.Apply(true)
-	O.Refresh()
+	if key == "lookBuilder" then
+		LayoutVariants()
+	end
+	if applying then
+		waiting = true
+		rebuildWaiting = rebuildWaiting or rebuild and true or false
+		return
+	end
+	ApplyChange(rebuild)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -532,6 +567,112 @@ local function Segments(row, options, segmentWidth, get, set)
 		end
 	end
 	return holder, Refresh
+end
+
+-- Dropdown: a box showing the current choice; clicking it opens the list under it. The list belongs to the window, not
+-- the page, so the page's edge never cuts it off. It closes on a pick, a click elsewhere, a scroll or a page change.
+local openDrop
+local function CloseDrop()
+	if openDrop then
+		openDrop:Hide()
+		openDrop = nil
+	end
+end
+
+local function Drop(page, spec)
+	local row = Row(page, RowHeight(spec.note), spec.hl)
+	Labels(page, row, spec.label, spec.note)
+	local width, step = 230, 24
+	local button = CreateFrame("Button", nil, row)
+	button:SetSize(width, 26)
+	button:SetPoint("RIGHT", -14, 0)
+	Solid(button, "BACKGROUND", { 0.03, 0.023, 0.018 }, 0.5):SetAllPoints()
+	local edges = Outline(button, C.white, 0.18)
+	local shown = Text(button, "GameFontHighlight", 13, TEXT)
+	shown:SetPoint("LEFT", 10, 0)
+	local arrow = button:CreateTexture(nil, "ARTWORK")
+	arrow:SetSize(10, 10)
+	arrow:SetPoint("RIGHT", -9, 0)
+	if Q.HasAtlas(ARROW_ATLAS) then
+		arrow:SetAtlas(ARROW_ATLAS)
+	else
+		arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
+	end
+	arrow:SetRotation(-math.pi / 2)
+	arrow:SetVertexColor(1, 1, 1, NOTE)
+	PassHover(row, button)
+
+	local list = CreateFrame("Frame", nil, panel)
+	list:SetFrameStrata("FULLSCREEN_DIALOG")
+	list:SetSize(width, #spec.options * step + 6)
+	list:SetPoint("TOPRIGHT", button, "BOTTOMRIGHT", 0, -2)
+	Solid(list, "BACKGROUND", C.window, 0.98):SetAllPoints()
+	Outline(list, C.accent, 0.45)
+	list:EnableMouse(true)
+	list:SetClampedToScreen(true)
+	list:Hide()
+	local items = {}
+	for index, option in ipairs(spec.options) do
+		local item = CreateFrame("Button", nil, list)
+		item:SetSize(width - 2, step)
+		item:SetPoint("TOPLEFT", 1, -3 - (index - 1) * step)
+		Solid(item, "HIGHLIGHT", C.accent, 0.12):SetAllPoints()
+		item.label = Text(item, "GameFontHighlight", 13, TEXT)
+		item.label:SetPoint("LEFT", 10, 0)
+		item.label:SetText(option[2])
+		item:SetScript("OnClick", function()
+			CloseDrop()
+			Q.db[spec.k] = option[1]
+			Changed(spec.k, spec.rebuild)
+		end)
+		item.value = option[1]
+		items[index] = item
+	end
+	-- A click anywhere outside the list or its box closes it.
+	list:SetScript("OnUpdate", function(self)
+		if IsMouseButtonDown("LeftButton") and not self:IsMouseOver() and not button:IsMouseOver() then
+			CloseDrop()
+		end
+	end)
+	button:SetScript("OnClick", function()
+		if openDrop == list then
+			CloseDrop()
+			return
+		end
+		CloseDrop()
+		openDrop = list
+		list:Show()
+	end)
+	button:HookScript("OnEnter", function()
+		Recolor(edges, C.accent, 0.5)
+	end)
+	button:HookScript("OnLeave", function()
+		Recolor(edges, C.white, 0.18)
+	end)
+	function row:Refresh()
+		local value = Q.db[spec.k]
+		-- An unknown value (edited by hand) shows as the default, which is how the tracker draws it.
+		local known = false
+		for _, option in ipairs(spec.options) do
+			known = known or option[1] == value
+		end
+		if not known then
+			value = Q.defaults[spec.k]
+		end
+		for _, option in ipairs(spec.options) do
+			if option[1] == value then
+				shown:SetText(option[2])
+			end
+		end
+		for _, item in ipairs(items) do
+			if item.value == value then
+				item.label:SetTextColor(C.accent[1], C.accent[2], C.accent[3], 1)
+			else
+				item.label:SetTextColor(1, 1, 1, TEXT)
+			end
+		end
+	end
+	controls[#controls + 1] = row
 end
 
 local function Choice(page, spec)
@@ -985,6 +1126,7 @@ local function Button(parent, label, primary, onClick)
 		Recolor(edges, primary and C.accent or C.white, primary and 0.6 or 0.3)
 	end)
 	button:SetScript("OnClick", onClick)
+	button.label = text
 	return button
 end
 
@@ -995,8 +1137,7 @@ local function RunAction(spec)
 	O.Refresh()
 end
 
--- A short tinted notice with a small moonlit diamond (the Experimental section's opening line): spec.lead in pale blue,
--- then spec.text.
+-- A short tinted notice with a small moonlit diamond: spec.lead in pale blue, then spec.text.
 local MOON = { 0.725, 0.812, 0.941 }
 
 local function Notice(page, spec)
@@ -1023,18 +1164,78 @@ local function Notice(page, spec)
 	page.y = page.y - height - 10
 end
 
--- Background themes: a card per theme, each showing that background behind a small sample of the tracker, drawn by
--- FrameBorder.lua's F.ThemeSample at the default darkness.
+-- Theme cards (Appearance page). Classic and Moonglow show their sky behind a small sample of the tracker, drawn by
+-- FrameBorder.lua's F.ThemeSample at the default darkness; Custom lists the player's own mix instead, since it changes.
 local THEME_CARDS = {
-	{ key = "current", name = "Current", note = "Today's dark panel" },
-	{ key = "moonglow", name = "Moonglow", note = "Night blue, moonlight and stars" },
+	{ key = "classic", sky = "current", name = "Classic", note = "Gold and bronze", title = { 1, 0.82, 0 },
+		zone = { 0.851, 0.69, 0.29 }, rule = { 0.863, 0.655, 0.498 }, bar = { 0.12, 0.62, 1 } },
+	{ key = "moonglow", sky = "midnight", name = "Moonglow", note = "Silver and night sky",
+		title = { 0.91, 0.93, 1 }, zone = { 0.91, 0.93, 1 }, rule = { 0.78, 0.84, 1 }, bar = { 0.78, 0.83, 1 } },
+	{ key = "custom", name = "Custom", note = "Your own mix" },
 }
 
+local function ThemeName(key)
+	for _, info in ipairs(THEME_CARDS) do
+		if info.key == key then
+			return info.name
+		end
+	end
+	return key
+end
+
+-- Opens or closes the builder (the Appearance page's look sections) and lays the page out again.
+local function SetBuilder(on)
+	Q.db.lookBuilder = on and true or false
+	LayoutVariants()
+	O.Refresh()
+end
+
+-- A theme card's sample: the sky, a few lines of the tracker in the theme's colours, and a bar in its bar colour.
+local function Sample(card, info, width, height)
+	local stage = CreateFrame("Frame", nil, card)
+	stage:SetPoint("TOPLEFT", 6, -6)
+	stage:SetSize(width, height)
+	if not info.sky then
+		Solid(stage, "BACKGROUND", C.black, 0.25):SetAllPoints()
+		stage.lines = Text(stage, "GameFontHighlightSmall", 10, NOTE)
+		stage.lines:SetPoint("TOPLEFT", 10, -10)
+		stage.lines:SetWidth(width - 20)
+		stage.lines:SetSpacing(2)
+		stage.lines:SetMaxLines(5)
+		stage:SetClipsChildren(true)
+		return stage
+	end
+	Q.Frame.ThemeSample(stage, info.sky, width, height)
+	local title = Text(stage, "GameFontHighlight", 10, 1, info.title)
+	title:SetText("Quests")
+	title:SetPoint("TOP", stage, "TOP", 0, -8)
+	local rule = Solid(stage, "ARTWORK", info.rule, 0.45)
+	rule:SetPoint("TOPLEFT", 10, -22)
+	rule:SetPoint("TOPRIGHT", -10, -22)
+	rule:SetHeight(1)
+	local zone = Text(stage, "GameFontHighlight", 10, 1, info.zone)
+	zone:SetText("Stranglethorn Vale")
+	zone:SetPoint("TOPLEFT", 10, -30)
+	local quest = Text(stage, "GameFontHighlight", 9, 1, { 1, 0.82, 0 })
+	quest:SetText("[41] Venture Company")
+	quest:SetPoint("TOPLEFT", 18, -46)
+	local track = Solid(stage, "ARTWORK", { 0.11, 0.15, 0.26 }, 0.9)
+	track:SetPoint("TOPLEFT", 24, -62)
+	track:SetSize(width - 48, 3)
+	local fill = Solid(stage, "ARTWORK", info.bar, 1, 1)
+	fill:SetPoint("TOPLEFT", track)
+	fill:SetSize((width - 48) * 0.6, 3)
+	return stage
+end
+
+-- Themes: a card per theme with buttons to try it, use it, keep or end a try, or open the builder on the look in use.
+-- Under the cards a line says what a try does; while one is on and the player's background or border is off, a
+-- switch there lends them for the look.
 local function Themes(page, spec)
-	local gap, art, caption, inset = 12, 118, 44, 18 -- inset: the same margin on both sides of the box
+	local gap, art, caption, buttons, inset, foot = 10, 76, 40, 38, 14, 44 -- inset: the margin on both sides of the box
 	local box = CreateFrame("Frame", nil, page)
 	box:SetPoint("TOPLEFT", 0, page.y)
-	box:SetSize(PAGE_WIDTH, 14 + 20 + 10 + art + caption + 14)
+	box:SetSize(PAGE_WIDTH, 14 + 20 + 8 + art + 6 + caption + buttons + 10 + foot)
 	Solid(box, "BACKGROUND", C.black, 0.1):SetAllPoints()
 	Outline(box, C.white, 0.05)
 	local title = Text(box, "GameFontHighlight", 14, TEXT)
@@ -1044,94 +1245,167 @@ local function Themes(page, spec)
 	note:SetPoint("TOPRIGHT", box, "TOPRIGHT", -inset, -16)
 	note:SetJustifyH("RIGHT")
 	note:SetText(spec.note)
-	local width = math.floor((PAGE_WIDTH - inset * 2 - gap) / 2)
+	local width = math.floor((PAGE_WIDTH - inset * 2 - gap * (#THEME_CARDS - 1)) / #THEME_CARDS)
 	local cards = {}
 	for index, info in ipairs(THEME_CARDS) do
-		local card = CreateFrame("Button", nil, box)
-		card:SetSize(width, art + caption)
-		card:SetPoint("TOPLEFT", inset + (index - 1) * (width + gap), -44)
+		local card = CreateFrame("Frame", nil, box)
+		card:SetSize(width, art + 6 + caption + buttons)
+		card:SetPoint("TOPLEFT", inset + (index - 1) * (width + gap), -42)
 		Solid(card, "BACKGROUND", C.card):SetAllPoints()
 		card.edges = Outline(card, C.white, 0.12)
-		local stage = CreateFrame("Frame", nil, card)
-		stage:SetPoint("TOPLEFT", 6, -6)
-		stage:SetSize(width - 12, art - 6)
-		Q.Frame.ThemeSample(stage, info.key, width - 12, art - 6)
-		-- A few lines of the tracker in its own colours, which a theme never changes.
-		local lines = {
-			{ "Quests", 10, { 1, 0.82, 0 }, "CENTER" },
-			{ "Stranglethorn Vale", 10, { 0.851, 0.69, 0.29 } },
-			{ "[41] Venture Company Mining", 9, { 1, 0.82, 0 }, nil, 8 },
-			{ "- 7/10 Singing Blue Crystal", 9, { 0.8, 0.8, 0.8 }, nil, 14 },
-			{ "[37] Favor for Krazek", 9, { 1, 0.82, 0 }, nil, 8 },
-		}
-		local y = -10
-		for _, entry in ipairs(lines) do
-			local text = Text(stage, "GameFontHighlight", entry[2], 1, entry[3])
-			if entry[4] == "CENTER" then
-				text:SetPoint("TOP", stage, "TOP", 0, y)
-				local rule = Solid(stage, "ARTWORK", C.accent, 0.45)
-				rule:SetPoint("TOPLEFT", 12, y - 14)
-				rule:SetPoint("TOPRIGHT", -12, y - 14)
-				rule:SetHeight(1)
-				y = y - 20
-			else
-				text:SetPoint("TOPLEFT", 12 + (entry[5] or 0), y)
-				y = y - 15
-			end
-		end
+		card.stage = Sample(card, info, width - 12, art)
 		card.name = Text(card, "GameFontHighlight", 14, TEXT)
-		card.name:SetPoint("TOPLEFT", stage, "BOTTOMLEFT", 4, -8)
+		card.name:SetPoint("TOPLEFT", card.stage, "BOTTOMLEFT", 4, -8)
 		card.name:SetText(info.name)
-		card.note = Text(card, "GameFontHighlightSmall", 11, NOTE)
+		card.state = Text(card, "GameFontHighlightSmall", 11, 1, C.accent)
+		card.state:SetPoint("TOPRIGHT", card.stage, "BOTTOMRIGHT", -4, -10)
+		card.state:SetJustifyH("RIGHT")
+		card.note = Text(card, "GameFontHighlightSmall", 10, NOTE)
 		card.note:SetPoint("TOPLEFT", card.name, "BOTTOMLEFT", 0, -3)
+		card.note:SetWidth(width - 16)
+		card.note:SetWordWrap(false)
 		card.note:SetText(info.note)
-		-- The chosen card's dot fills in.
-		card.ring = Solid(card, "ARTWORK", C.white, 0.3)
-		card.ring:SetSize(12, 12)
-		card.ring:SetPoint("BOTTOMRIGHT", -12, 16)
-		Round(card.ring, card)
-		card.hole = Solid(card, "ARTWORK", C.card, 1, 1)
-		card.hole:SetSize(10, 10)
-		card.hole:SetPoint("CENTER", card.ring)
-		Round(card.hole, card)
-		card.dot = Solid(card, "ARTWORK", C.accent, 1, 2)
-		card.dot:SetSize(6, 6)
-		card.dot:SetPoint("CENTER", card.ring)
-		Round(card.dot, card)
-		card:SetScript("OnClick", function()
-			Q.db[spec.k] = info.key
-			Changed(spec.k)
-		end)
-		card:SetScript("OnEnter", function()
-			if Q.db[spec.k] ~= info.key then
-				Recolor(card.edges, C.white, 0.28)
+		-- Two buttons side by side, or one across the card.
+		local half = math.floor((width - 20 - 6) / 2)
+		local function Place(button, left, size)
+			button:SetSize(size, 26)
+			button:SetPoint("BOTTOMLEFT", left, 10)
+		end
+		card.left = Button(card, "", false, function()
+			if Q.trial and Q.trial.theme == info.key then
+				Q.EndTrial(false) -- Go back
+			else
+				Q.TryTheme(info.key) -- Try it
 			end
-		end)
-		card:SetScript("OnLeave", function()
 			O.Refresh()
 		end)
+		Place(card.left, 10, half)
+		card.right = Button(card, "", true, function()
+			if Q.trial and Q.trial.theme == info.key then
+				Q.EndTrial(true) -- Keep
+			else
+				Q.ApplyTheme(info.key) -- Use (a try of another theme ends with it)
+			end
+			O.Refresh()
+		end)
+		Place(card.right, 10 + half + 6, half)
+		-- One button across the card: Customise on the look in use (Go back while another theme is tried), or Use on
+		-- Custom (which can't be tried).
+		card.whole = Button(card, "", false, function()
+			if Q.db.theme == info.key and Q.trial then
+				Q.EndTrial(false)
+				O.Refresh()
+			elseif Q.db.theme == info.key then
+				SetBuilder(true)
+			else
+				Q.ApplyTheme(info.key)
+				O.Refresh()
+			end
+		end)
+		Place(card.whole, 10, width - 20)
 		card.key = info.key
 		cards[index] = card
 	end
+
+	-- The line under the cards, and the switch that lends a background and border while trying.
+	local strip = CreateFrame("Frame", nil, box)
+	strip:SetPoint("BOTTOMLEFT", inset, 12)
+	strip:SetPoint("BOTTOMRIGHT", -inset, 12)
+	strip:SetHeight(foot - 6)
+	local fill = strip:CreateTexture(nil, "BACKGROUND")
+	fill:SetAllPoints()
+	local edges = Outline(strip, C.white, 0.06)
+	local line = Text(strip, "GameFontHighlightSmall", 11, NOTE)
+	line:SetPoint("LEFT", 12, 0)
+	line:SetJustifyH("LEFT")
+	line:SetSpacing(2)
+	local lend = Pill(strip, 34, 18, 3)
+	lend:SetPoint("RIGHT", -10, 0)
+	local lendLabel = Text(strip, "GameFontHighlightSmall", 11, TEXT)
+	lendLabel:SetPoint("RIGHT", lend, "LEFT", -8, 0)
+	lendLabel:SetJustifyH("RIGHT")
+	lendLabel:SetText("Show it on a background and border")
+	lend:SetScript("OnClick", function()
+		Q.SetTrialFrame(not Q.trial.frame)
+		O.Refresh()
+	end)
 	page.y = page.y - box:GetHeight()
+
+	local function Lit(color, alpha)
+		return color[1], color[2], color[3], alpha
+	end
 	local row = { hover = box }
 	function row:Refresh()
-		local chosen = Q.db[spec.k]
-		if not Q.Frame.THEMES[chosen] then
-			chosen = Q.defaults[spec.k]
-		end
+		local trial = Q.trial
+		local custom = type(Q.db.lookCustom) == "table"
 		for _, card in ipairs(cards) do
-			local selected = chosen == card.key
-			Recolor(card.edges, selected and C.accent or C.white, selected and 0.75 or 0.12)
-			if selected then
-				card.name:SetTextColor(C.accent[1], C.accent[2], C.accent[3], 1)
-				card.ring:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 1)
+			local key = card.key
+			local inUse = Q.db.theme == key
+			local tried = trial and trial.theme == key
+			local lit = tried and C.teal or (inUse and not trial) and C.accent or nil
+			Recolor(card.edges, lit or C.white, lit and 0.75 or 0.12)
+			if lit then
+				card.name:SetTextColor(Lit(lit, 1))
 			else
 				card.name:SetTextColor(1, 1, 1, TEXT)
-				card.ring:SetColorTexture(1, 1, 1, 0.3)
 			end
-			card.dot:SetShown(selected)
+			card.state:SetText(tried and "Trying" or inUse and "In use" or "")
+			card.state:SetTextColor(Lit(tried and C.teal or C.accent, 1))
+			if key == "custom" then
+				-- Custom: Use or Customise, never Try it (it is already the player's own).
+				card.note:SetText(custom and ("From " .. ThemeName(Q.db.lookFrom)) or "Change any part to make one")
+				card.stage.lines:SetText(custom and O.LookSummary(Q.db.lookCustom, true) or "")
+				card.left:Hide()
+				card.right:Hide()
+				card.whole:SetShown(custom or inUse)
+				card.whole.label:SetText(not inUse and "Use" or trial and "Go back" or "Customise")
+				card:SetAlpha((custom or inUse) and 1 or 0.5)
+			else
+				local single = inUse and not tried
+				card.whole:SetShown(single)
+				card.whole.label:SetText(trial and "Go back" or "Customise")
+				card.left:SetShown(not single)
+				card.right:SetShown(not single)
+				card.left.label:SetText(tried and "Go back" or "Try it")
+				card.right.label:SetText(tried and "Keep" or "Use")
+			end
 		end
+		local lacking = trial and not (Q.db.backdrop and Q.db.border) and true or false
+		lend:SetShown(lacking)
+		lendLabel:SetShown(lacking)
+		if lacking then
+			lend:SetOn(trial.frame)
+		end
+		line:SetWidth(PAGE_WIDTH - inset * 2 - 24 - (lacking and (34 + 18 + math.ceil(lendLabel:GetStringWidth())) or 0))
+		if trial then
+			line:SetText(("|cff9bdcf0Trying %s.|r Keep it, or close this window to go back."):format(ThemeName(trial.theme)))
+			Fade(fill, "HORIZONTAL", C.teal, 0.14, 0.04)
+			Recolor(edges, C.teal, 0.4)
+		else
+			line:SetText("Try a theme to see it on your tracker. Nothing changes until you keep it.")
+			Fade(fill, "HORIZONTAL", C.white, 0.02, 0.01)
+			Recolor(edges, C.white, 0.06)
+		end
+	end
+	controls[#controls + 1] = row
+end
+
+-- A short live description of the look (spec.text, a function), in the builder's place while it is closed.
+local function Summary(page, spec)
+	local box = CreateFrame("Frame", nil, page)
+	box:SetPoint("TOPLEFT", 0, page.y)
+	box:SetSize(PAGE_WIDTH, 60)
+	Solid(box, "BACKGROUND", C.black, 0.18):SetAllPoints()
+	Outline(box, C.white, 0.05)
+	local line = Text(box, "GameFontHighlight", 12, 0.75)
+	line:SetPoint("TOPLEFT", 16, -12)
+	line:SetWidth(PAGE_WIDTH - 32)
+	line:SetSpacing(3)
+	line:SetMaxLines(3)
+	page.y = page.y - 60
+	local row = { hover = box }
+	function row:Refresh()
+		line:SetText(spec.text())
 	end
 	controls[#controls + 1] = row
 end
@@ -1178,7 +1452,13 @@ end
 -- A setting that only matters while another is set (spec.enabledBy = a saved switch that must be on, spec.enabledWhen =
 -- a function) is dimmed, ignores the mouse, and names what it needs in a tooltip (spec.needs). Hovering it still
 -- shades the part of the tracker it would change.
+local TRIAL_NEEDS = "Keep or Go back first (Theme, at the top of the page): parts can't change while a theme is tried"
+
 local function SpecEnabled(spec)
+	-- The builder's rows wait while a theme is tried: they show your own look, not the one on screen.
+	if Q.trial and LOOK_KEY[spec.k] then
+		return false
+	end
 	if spec.enabledBy and not Q.db[spec.enabledBy] then
 		return false
 	end
@@ -1199,9 +1479,13 @@ local function Gate(row, spec)
 		if row.Enter then
 			row.Enter()
 		end
-		if spec.needs then
+		local needs = (Q.trial and LOOK_KEY[spec.k]) and TRIAL_NEEDS or spec.needs
+		if type(needs) == "function" then
+			needs = needs()
+		end
+		if needs then
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
-			GameTooltip:SetText(spec.needs)
+			GameTooltip:SetText(needs)
 			GameTooltip:Show()
 		end
 	end)
@@ -1226,9 +1510,11 @@ local BUILD = {
 	toggle = Toggle,
 	slider = Slider,
 	choice = Choice,
+	drop = Drop,
 	colour = Colour,
 	card = ColourCard,
 	presets = Presets,
+	summary = Summary,
 	badges = BadgeStyles,
 	inset = Inset,
 	notice = Notice,
@@ -1322,6 +1608,7 @@ local function LayoutNav()
 end
 
 local function ShowPage(index)
+	CloseDrop()
 	current = index
 	Q.Motion.Stop(SCROLL_TWEEN) -- a jump still easing on the page before
 	jumpedTo = nil
@@ -1364,6 +1651,24 @@ local function BuildPage(index, info)
 	page.y = 0
 	page.sections = {}
 	for _, group in ipairs(info.groups) do
+		-- A group with `variant` is one of two alternatives (the Appearance page's builder, or its summary while the
+		-- builder is closed). Each variant's groups are built into a frame of their own, all starting where the first one
+		-- does; only one shows (LayoutVariants).
+		local into = page
+		if group.variant then
+			page.variants = page.variants or {}
+			into = page.variants[group.variant]
+			if not into then
+				CloseCards(page)
+				page.variantTop = page.variantTop or page.y - 18 -- the gap GroupLabel leaves above a group
+				into = CreateFrame("Frame", nil, page)
+				into:SetPoint("TOPLEFT", 0, page.variantTop)
+				into:SetWidth(PAGE_WIDTH)
+				into.y, into.sections = 0, {}
+				page.variants[group.variant] = into
+			end
+		end
+		local page = into -- the rest of the group is built into it
 		-- group.button: a small button at the right of the group's label line (the Colours page's Reset colours), so
 		-- it's in view without scrolling. It stands 6 above the label, which moves down to make room.
 		GroupLabel(page, group[1], group[2], group.button and 6)
@@ -1383,15 +1688,45 @@ local function BuildPage(index, info)
 			local before = #controls
 			BUILD[spec[1]](page, spec)
 			-- Only a control that added itself to the list can be greyed out (notes don't).
-			if #controls > before and (spec.enabledBy or spec.enabledWhen) then
+			if #controls > before and (spec.enabledBy or spec.enabledWhen or LOOK_KEY[spec.k]) then
 				Gate(controls[#controls], spec)
 			end
 		end
 	end
 	CloseCards(page)
 	page.height = -page.y + 12
+	for _, variant in pairs(page.variants or {}) do
+		CloseCards(variant)
+		variant.height = -variant.y
+		variant:SetHeight(variant.height)
+	end
 	page:SetHeight(page.height)
 	pages[index] = page
+end
+
+-- Shows the variant in use on each page that has them (the builder while it is open, else its summary), and sizes
+-- the page to fit.
+function LayoutVariants()
+	local want = Q.db.lookBuilder and "builder" or "summary"
+	for _, page in pairs(pages) do
+		if page.variants then
+			local shown = page.variants[want] and want or next(page.variants)
+			for theme, variant in pairs(page.variants) do
+				variant:SetShown(theme == shown)
+			end
+			page.height = -page.variantTop + page.variants[shown].height + 12
+			page:SetHeight(page.height)
+		end
+	end
+	if child and pages[current] then
+		child:SetHeight(pages[current].height)
+		C_Timer.After(0, function()
+			-- A shorter page may end above where it was scrolled to.
+			Q.Motion.Stop(SCROLL_TWEEN)
+			scroll:SetVerticalScroll(math.min(scroll:GetVerticalScroll(), scroll:GetVerticalScrollRange()))
+			UpdateThumb()
+		end)
+	end
 end
 
 -- Indented links to a page's sections, on a faint bronze guide line; the lit one gets a tick on the line.
@@ -1574,6 +1909,7 @@ local function Create()
 		local base = math.max(0, math.min(range, Q.Motion.Target(SCROLL_TWEEN) or from))
 		local target = math.max(0, math.min(range, base - delta * 44))
 		jumpedTo = nil
+		CloseDrop()
 		Q.Motion.Tween(SCROLL_TWEEN, from, target, Q.Motion.SCROLL, function(value)
 			self:SetVerticalScroll(value)
 			UpdateThumb()
@@ -1597,6 +1933,17 @@ local function Create()
 		button.label = Text(button, "GameFontHighlight", 14, 0.7)
 		button.label:SetPoint("LEFT", 18, 0)
 		button.label:SetText(info.name)
+		-- A small tag after the name for a page that's new in this version.
+		if info.tag then
+			local tag = CreateFrame("Frame", nil, button)
+			local word = Text(tag, "GameFontHighlightSmall", 10, 1, MOON)
+			word:SetPoint("CENTER")
+			word:SetText(info.tag:upper())
+			tag:SetSize(math.ceil(word:GetStringWidth()) + 10, 15)
+			tag:SetPoint("LEFT", button.label, "RIGHT", 8, 0)
+			Solid(tag, "BACKGROUND", MOON, 0.08):SetAllPoints()
+			Outline(tag, MOON, 0.4)
+		end
 		button:SetScript("OnClick", function()
 			ShowPage(index)
 		end)
@@ -1621,6 +1968,7 @@ local function Create()
 	local reset = Button(foot, "Reset to defaults", false, function()
 		Q.ResetSettings()
 		Q.Tracker.Rebuild()
+		LayoutVariants()
 		O.Refresh()
 	end)
 	reset:SetPoint("LEFT", 16, 0)
@@ -1629,8 +1977,14 @@ local function Create()
 	end)
 	done:SetPoint("RIGHT", -16, 0)
 
-	panel:SetScript("OnShow", O.Refresh)
+	panel:SetScript("OnShow", function()
+		LayoutVariants()
+		O.Refresh()
+	end)
 	panel:SetScript("OnHide", function()
+		-- A theme being tried ends with the window.
+		Q.EndTrial(false)
+		CloseDrop()
 		Q.Motion.Stop(SCROLL_TWEEN)
 		-- A row under the mouse gets no OnLeave when the window closes; clear its shading and the tracker's.
 		for _, control in ipairs(controls) do
@@ -1641,6 +1995,7 @@ local function Create()
 		end
 		Q.Tracker.SetHighlight(nil)
 	end)
+	LayoutVariants()
 	ShowPage(current)
 	O.Refresh()
 end
@@ -1728,9 +2083,10 @@ SlashCmdList.CLEANQUESTTRACKER = function(message)
 	elseif command == "reset" then
 		Q.ResetSettings()
 		Q.Tracker.Rebuild()
+		LayoutVariants()
 		Q.Print("All settings reset.")
 	elseif command == "help" then
-		Q.Print("/cqt opens settings (/sqt and /qc work too). /cqt lock, unlock, compact, comfortable, reset, preview, party, fakeparty 1-4.")
+		Q.Print("/cqt opens settings (/sqt and /qc work too). /cqt lock, unlock, compact, comfortable, reset, preview (progress bar effects), party, fakeparty 1-4.")
 	else
 		O.Toggle()
 	end

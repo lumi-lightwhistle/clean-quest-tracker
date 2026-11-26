@@ -4,7 +4,7 @@ Three layers. Each catches what the one before it can't.
 
 | Layer | What it covers | Where it runs | How long |
 |---|---|---|---|
-| 1. Offline tests (`tests/`) | Tracked order (`Rank`), finished quests' place (`SortFinished`), zone grouping and order (`Group`), the watch list to zone groups (`Collect`), where you are (`T.ReadWhere`, `T.CurrentZone`, `T.OnZoneChanged`), quest title and hover colours (`T.Title`) | CI on every PR (`lua-tests`), and `python tools/prereview.py` when this machine has Lua 5.1 or `lupa` | Under a second |
+| 1. Offline tests (`tests/`) | Tracked order (`Rank`), finished quests' place (`SortFinished`), zone grouping and order (`Group`), the watch list to zone groups (`Collect`), where you are (`T.ReadWhere`, `T.CurrentZone`, `T.OnZoneChanged`), quest title and hover colours (`T.Title`), themes and trying one (`Q.Theme`, `Q.TryTheme`, `Q.EndTrial`), zone name colours (`T.ZoneColor`) and what the look's moving parts and the frame's layout cost (calls into the game per frame, `test_drawing.lua`) | CI on every PR (`lua-tests`), and `python tools/prereview.py` when this machine has Lua 5.1 or `lupa` | Under a second |
 | 2. In-game self-test (`/cqttest`) | What needs the real client and the real list: zones as drawn, the game briefly untracking and re-tracking a quest as it completes, focus mode folding and its fade | In the game, by hand | About 25 seconds |
 | 3. Manual checklist (below) | What neither can fake: the server, real travel, combat, a party, how it looks | In the game, by hand | A few minutes |
 
@@ -90,3 +90,20 @@ Walk the lines that match the change. Note in the PR which ones you did.
 - [ ] **Animations:** quests glide, zones fade and fold smoothly at each animation speed; nothing flickers.
 - [ ] **Edit Mode taint:** open and close Edit Mode, then use a quest item and the world map. No "blocked action" or
       taint errors (turn on Lua errors with `/console scriptErrors 1`).
+- [ ] **Appearance, themes:** Try it, Go back and Keep on Classic and Moonglow; closing the settings window ends a try;
+      Show it on a background and border works while your own are off. Use on a theme never turns your background or
+      border on.
+- [ ] **Appearance, builder:** turn on Customise every part, change one part: the Custom card appears ("From ..."),
+      survives using Classic and coming back. Rows grey out while a theme is tried. Reset to defaults closes the builder.
+- [ ] **Look effects:** stars, aurora, the border light and the bar effects move, and rest in combat and with
+      Animations set to None; the Crescent tip still follows the fill in combat. Tonight's moon crest shows its phase on
+      hover. `/cqt preview` shows all five bar effects on both skies. Moontide's waves roll smoothly on a smooth bar
+      and the Polished sweep looks the same after the tracker changes height.
+- [ ] **Cost:** with your look and the tracker on screen, `/console scriptProfile 1`, `/reload`, then read
+      `GetAddOnCPUUsage("CleanQuestTracker")` 20 seconds apart, calling `UpdateAddOnCPUUsage()` before each reading
+      (newer clients: `C_AddOnProfiler.GetAddOnMetric`), with the border light on and off; finish with
+      `/console scriptProfile 0` and `/reload`. Also: the Polished sweep's next pass comes on time after its rest;
+      aurora, mist and Moontide look smooth on a fast screen (they move 30 times a second); the moonbeam and aurora
+      follow the frame as its height eases.
+- [ ] **Colours page:** Zone headings and Progress bars grey out, with the reason, while the look uses Moonsilver or a
+      theme bar colour.

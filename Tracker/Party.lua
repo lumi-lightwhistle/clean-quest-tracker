@@ -670,9 +670,7 @@ local function Paint(badge, count, size, style)
 	elseif style == "solid" then
 		-- A gentle top-to-bottom shade; plain vertex colour where gradients aren't available.
 		local top, bottom = tint, Shade(tint, 0.82)
-		local ok = CreateColor and pcall(fill.SetGradient, fill, "VERTICAL",
-			CreateColor(bottom.r, bottom.g, bottom.b, 1), CreateColor(top.r, top.g, top.b, 1))
-		if not ok then
+		if not Q.Gradient(fill, "VERTICAL", bottom.r, bottom.g, bottom.b, 1, top.r, top.g, top.b, 1) then
 			fill:SetVertexColor(tint.r, tint.g, tint.b, 1)
 		end
 		iconColor, textColor = INK, INK

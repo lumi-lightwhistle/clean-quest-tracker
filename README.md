@@ -86,7 +86,7 @@ Bars fill as you collect items and defeat enemies. Finished quests turn green an
 &nbsp;<br>
 **Yours to arrange**
 
-Comfortable or Compact spacing, your own colours, six party badge styles, an optional dark panel with padding and rounded corners, and a bronze border with corner flourishes and a crest. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.<br>
+Comfortable or Compact spacing, your own colours, six party badge styles, an optional dark panel with padding and rounded corners, and a border. Two themes, Classic (bronze, corner flourishes, a crest) and Moonglow (silver, night sky, moonlit effects), or mix your own from every part. Try a theme before you keep it. Unlock the frame to move and resize it. Animation is Snappy, Smooth or off.<br>
 &nbsp;
 
 </td>
@@ -131,6 +131,7 @@ Shift-click a quest to link it in chat. Right-click it for the quest menu, inclu
 | `/cqt compact`, `/cqt comfortable` | Switch layout preset |
 | `/cqt party` | List what each source reports about your party's quests, if a count looks wrong |
 | `/cqt reset` | Restore every setting to its default |
+| `/cqt preview` | Show the progress bar effects side by side |
 
 ## Works with
 
